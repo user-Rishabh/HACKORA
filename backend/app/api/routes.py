@@ -836,11 +836,26 @@ def export_repository_docs(repo_id: str, repo_name: str = Query(..., description
 
 
 # ==============================================================================
-# STAGE 1 & STAGE 2 API ENDPOINTS
+# MULTI-PROVIDER & MULTI-MODEL LLM ENDPOINTS
 # ==============================================================================
+
+class ValidateProviderRequest(BaseModel):
+    provider: str
+    api_key: Optional[str] = None
+
+class MultiProviderChatRequest(BaseModel):
+    provider: str = "groq"
+    model: Optional[str] = None
+    messages: list[dict]
+    system_prompt: Optional[str] = ""
+    api_key: Optional[str] = None
+    temperature: Optional[float] = 0.3
 
 class Stage1ExplainRequest(BaseModel):
     problem_statement: str
+    provider: Optional[str] = "groq"
+    model: Optional[str] = None
+    api_key: Optional[str] = None
 
 class Stage1ExploreRequest(BaseModel):
     prompt: str
@@ -849,11 +864,17 @@ class Stage1ChatRequest(BaseModel):
     messages: list[dict]
     context: str
     mode: Optional[str] = "problem_statement"
+    provider: Optional[str] = "groq"
+    model: Optional[str] = None
+    api_key: Optional[str] = None
 
 class Stage1DeliverableRequest(BaseModel):
     deliverable_type: str
     context: str
     conversation_notes: Optional[str] = None
+    provider: Optional[str] = "groq"
+    model: Optional[str] = None
+    api_key: Optional[str] = None
 
 class Stage2JudgeQuestionsRequest(BaseModel):
     repo_name: Optional[str] = None
@@ -867,6 +888,75 @@ class Stage2MockInterviewRequest(BaseModel):
     repo_name: Optional[str] = None
 
 
+@router.get("/llm/providers")
+def get_llm_providers():
+    """
+    Returns list of supported AI providers (Groq, OpenAI, Anthropic, Gemini, Moonshot, OpenRouter)
+    along with server configuration status. Never returns secret keys.
+    """
+    from app.llm.provider_manager import get_provider_metadata_list
+    return {"providers": get_provider_metadata_list()}
+
+
+@router.post("/llm/validate")
+def validate_provider_credentials(req: ValidateProviderRequest):
+    """
+    Validates user credentials against the specified AI provider.
+    """
+    from app.llm.provider_manager import validate_credentials
+    return validate_credentials(req.provider, req.api_key)
+
+
+@router.get("/llm/models")
+def get_provider_models(provider: str = Query(..., description="Provider ID"), api_key: Optional[str] = Query(None)):
+    """
+    Lists dynamically available models for a given provider.
+    """
+    from app.llm.provider_manager import list_available_models
+    return {"provider": provider, "models": list_available_models(provider, api_key)}
+
+
+@router.post("/llm/chat")
+def run_multiprovider_chat(req: MultiProviderChatRequest):
+    """
+    Synchronous multi-provider chat completion.
+    """
+    from app.llm.provider_manager import execute_multi_provider_chat
+    try:
+        reply = execute_multi_provider_chat(
+            provider=req.provider,
+            model=req.model or "",
+            messages=req.messages,
+            system_prompt=req.system_prompt or "",
+            custom_key=req.api_key,
+            temperature=req.temperature or 0.3
+        )
+        return {"reply": reply}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/llm/chat/stream")
+def stream_multiprovider_chat(req: MultiProviderChatRequest):
+    """
+    Streaming multi-provider chat using Server-Sent Events (SSE).
+    """
+    from app.llm.provider_manager import stream_multi_provider_chat
+    from fastapi.responses import StreamingResponse
+    try:
+        generator = stream_multi_provider_chat(
+            provider=req.provider,
+            model=req.model or "",
+            messages=req.messages,
+            system_prompt=req.system_prompt or "",
+            custom_key=req.api_key,
+            temperature=req.temperature or 0.3
+        )
+        return StreamingResponse(generator, media_type="text/event-stream")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/stage1/explain-ps")
 def api_explain_problem_statement(req: Stage1ExplainRequest):
     """
@@ -876,7 +966,12 @@ def api_explain_problem_statement(req: Stage1ExplainRequest):
         raise HTTPException(status_code=400, detail="Problem statement text cannot be empty.")
     from app.llm.stage_services import explain_problem_statement
     try:
-        return explain_problem_statement(req.problem_statement)
+        return explain_problem_statement(
+            text=req.problem_statement,
+            provider=req.provider or "groq",
+            model=req.model,
+            custom_key=req.api_key
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to explain problem statement: {str(e)}")
 
@@ -902,7 +997,14 @@ def api_chat_stage1(req: Stage1ChatRequest):
     """
     from app.llm.stage_services import chat_stage1
     try:
-        reply = chat_stage1(req.messages, req.context, req.mode or "problem_statement")
+        reply = chat_stage1(
+            messages=req.messages,
+            context=req.context,
+            mode=req.mode or "problem_statement",
+            provider=req.provider or "groq",
+            model=req.model,
+            custom_key=req.api_key
+        )
         return {"reply": reply}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
@@ -916,7 +1018,14 @@ def api_generate_stage1_deliverable(req: Stage1DeliverableRequest):
     """
     from app.llm.stage_services import generate_stage1_deliverable
     try:
-        return generate_stage1_deliverable(req.deliverable_type, req.context, req.conversation_notes)
+        return generate_stage1_deliverable(
+            deliverable_type=req.deliverable_type,
+            context=req.context,
+            conversation_notes=req.conversation_notes,
+            provider=req.provider or "groq",
+            model=req.model,
+            custom_key=req.api_key
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Deliverable generation failed: {str(e)}")
 

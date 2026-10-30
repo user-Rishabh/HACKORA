@@ -24,68 +24,83 @@ def _get_groq_client() -> Optional[Any]:
 # STAGE 1: EXPLORE & PLAN
 # ==============================================================================
 
-def explain_problem_statement(text: str) -> Dict[str, Any]:
+# ==============================================================================
+# STAGE 1: EXPLORE & PLAN
+# ==============================================================================
+
+def explain_problem_statement(text: str, provider: str = "groq", model: Optional[str] = None, custom_key: Optional[str] = None) -> Dict[str, Any]:
     """
     Analyzes a raw problem statement text and produces a structured, detailed
-    explanation broken into clear bulleted points and categories.
+    explanation covering all required facets while explicitly distinguishing
+    extracted facts from inferred recommendations.
     """
-    client = _get_groq_client()
+    from app.llm.provider_manager import execute_multi_provider_chat
     clean_text = text.strip()
 
     system_prompt = (
-        "You are an elite hackathon mentor and technical architect for DevLens AI. "
-        "Analyze the user's problem statement and break it down into a comprehensive, "
-        "structured technical breakdown. You must return valid JSON with the exact keys:\n"
+        "You are an elite hackathon mentor and technical judge for DevLens AI. "
+        "Analyze the provided problem statement document/text. Produce a detailed, structured "
+        "forensic breakdown in valid JSON format. Follow these strict rules:\n"
+        "1. Do NOT invent requirements or judging criteria that are absent from the source document.\n"
+        "2. Explicitly distinguish stated facts in the source document from inferred recommendations.\n"
+        "Return valid JSON matching this exact structure:\n"
         "{\n"
-        "  \"title\": \"Clear concise title for the project/problem\",\n"
-        "  \"summary\": \"2-3 sentence executive synopsis of what is being tackled\",\n"
-        "  \"core_problem\": \"The root cause and pain point that makes this problem difficult\",\n"
-        "  \"target_beneficiaries\": [\"list\", \"of\", \"primary personas or affected users\"],\n"
-        "  \"technical_constraints\": [\"list\", \"of\", \"inferred or stated technical and operational constraints\"],\n"
-        "  \"key_functional_requirements\": [\"bullet\", \"points\", \"of must-have features\"],\n"
-        "  \"expected_outcomes\": [\"clear\", \"metrics\", \"or tangible deliverables\"]\n"
+        "  \"title\": \"Clear concise title for the project or problem\",\n"
+        "  \"overview_objective\": \"Executive synopsis of the problem and high-level objective stated in the document\",\n"
+        "  \"actual_problem\": \"The root cause, core technical/operational challenge, and why it is difficult to solve\",\n"
+        "  \"target_users_stakeholders\": [\"List\", \"of\", \"target users, personas, or beneficiaries stated or directly impacted\"],\n"
+        "  \"stated_requirements\": [\"Requirements, features, and deliverables explicitly mandated by the source document\"],\n"
+        "  \"inferred_recommendations\": [\"Architectural or implementation recommendations inferred to satisfy the requirements (clearly marked as recommendations)\"],\n"
+        "  \"constraints_limitations\": [\"Technical, operational, hardware, compliance, latency, or scale constraints stated in the document\"],\n"
+        "  \"success_judging_criteria\": \"Evaluation criteria, benchmarks, or judging rubrics stated in the document (or 'No explicit judging criteria provided in source document')\",\n"
+        "  \"important_terms\": [\"Important domain terms, acronyms, or concepts that need clarification for technical implementation\"]\n"
         "}"
     )
 
-    if client:
-        try:
-            resp, _ = execute_groq_chat_completion(
-                client=client,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Problem Statement:\n\n{clean_text[:6000]}"}
-                ],
-                temperature=0.2,
-                response_format={"type": "json_object"},
-                max_tokens=1500
-            )
-            raw = resp.choices[0].message.content.strip()
-            return json.loads(raw)
-        except Exception as e:
-            print(f"[StageServices] explain_problem_statement LLM error: {e}")
+    try:
+        raw = execute_multi_provider_chat(
+            provider=provider or "groq",
+            model=model or "",
+            messages=[{"role": "user", "content": f"Problem Statement Document:\n\n{clean_text[:8000]}"}],
+            system_prompt=system_prompt,
+            custom_key=custom_key,
+            temperature=0.15,
+            max_tokens=2200
+        )
+        # Parse JSON from raw output
+        json_match = re.search(r"\{[\s\S]*\}", raw)
+        if json_match:
+            return json.loads(json_match.group(0))
+        return json.loads(raw)
+    except Exception as e:
+        print(f"[StageServices] explain_problem_statement error: {e}")
 
-    # Fallback heuristic parser if LLM unavailable
+    # Fallback heuristic parser if model call fails
     lines = [l.strip() for l in clean_text.split("\n") if l.strip()]
     title = lines[0][:80] if lines else "Problem Statement Analysis"
     return {
         "title": title,
-        "summary": clean_text[:300] + ("..." if len(clean_text) > 300 else ""),
-        "core_problem": "Addressing inefficiencies, lack of visibility, and manual coordination in the domain.",
-        "target_beneficiaries": ["Developers & Teams", "End users needing automated insights", "Stakeholders"],
-        "technical_constraints": [
-            "Low latency response time (< 500ms)",
-            "Secure data handling and secret protection",
-            "Scalable microservices or modular service architecture"
+        "overview_objective": clean_text[:350] + ("..." if len(clean_text) > 350 else ""),
+        "actual_problem": "Addressing inefficiencies, lack of visibility, and manual coordination in the domain.",
+        "target_users_stakeholders": ["Developers & Engineering Teams", "Operational Stakeholders", "End-Users"],
+        "stated_requirements": [
+            "Data ingestion and document parsing capability",
+            "Structured analytical summary engine",
+            "Exportable technical reports and interactive workspace"
         ],
-        "key_functional_requirements": [
-            "User interface for seamless data entry and visualization",
-            "Automated analysis engine with AI-assisted insights",
-            "Exportable reports and audit trails"
+        "inferred_recommendations": [
+            "Implement asynchronous queue for long-running document analysis",
+            "Expose typed REST endpoints for modular client consumption",
+            "Introduce client-side persistence for session durability"
         ],
-        "expected_outcomes": [
-            "Demonstrable working end-to-end prototype",
-            "Defensible technical architecture and benchmarked latency",
-            "Clear alignment with hackathon evaluation rubrics"
+        "constraints_limitations": [
+            "Low-latency response budget (< 1000ms for UI actions)",
+            "Strict secret redaction and credential protection"
+        ],
+        "success_judging_criteria": "No explicit judging criteria provided in source document. Evaluation will focus on technical depth, architecture defensibility, and functional execution.",
+        "important_terms": [
+            "AST (Abstract Syntax Tree): Syntactic representation of source code structure",
+            "RAG (Retrieval-Augmented Generation): Grounded contextual synthesis using indexed code chunks"
         ]
     }
 
@@ -148,12 +163,20 @@ def explore_open_innovation(prompt: str) -> Dict[str, Any]:
         "suggested_mvp_scope": ["Context ingestion pipeline", "Grounded AI exploration chat", "Automated technical blueprint export"]
     }
 
-def chat_stage1(messages: List[Dict[str, str]], context: str, mode: str = "problem_statement") -> str:
+def chat_stage1(
+    messages: List[Dict[str, str]],
+    context: str,
+    mode: str = "problem_statement",
+    provider: str = "groq",
+    model: Optional[str] = None,
+    custom_key: Optional[str] = None,
+) -> str:
     """
     Conversational AI workspace assistant for Stage 1.
     Keeps full context of the problem statement or open innovation prompt.
+    Supports multi-provider execution (Groq, OpenAI, Anthropic, Gemini, Moonshot, OpenRouter).
     """
-    client = _get_groq_client()
+    from app.llm.provider_manager import execute_multi_provider_chat
     system_prompt = (
         "You are the Stage 1 AI Planning Partner inside DevLens AI (Explore & Plan). "
         "Your role is to guide the developer from raw ideas to a defensible, production-grade technical plan. "
@@ -163,21 +186,18 @@ def chat_stage1(messages: List[Dict[str, str]], context: str, mode: str = "probl
         f"Active Workspace Context ({mode}):\n{context[:4000]}"
     )
 
-    llm_messages = [{"role": "system", "content": system_prompt}]
-    for m in messages[-10:]:
-        llm_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
-
-    if client:
-        try:
-            resp, _ = execute_groq_chat_completion(
-                client=client,
-                messages=llm_messages,
-                temperature=0.3,
-                max_tokens=1200
-            )
-            return resp.choices[0].message.content.strip()
-        except Exception as e:
-            print(f"[StageServices] chat_stage1 LLM error: {e}")
+    try:
+        return execute_multi_provider_chat(
+            provider=provider or "groq",
+            model=model or "",
+            messages=messages[-12:],
+            system_prompt=system_prompt,
+            custom_key=custom_key,
+            temperature=0.3,
+            max_tokens=1800
+        )
+    except Exception as e:
+        print(f"[StageServices] chat_stage1 multi-provider error: {e}")
 
     return (
         "Based on your context, the primary technical consideration is architecting a clean separation "
@@ -186,7 +206,14 @@ def chat_stage1(messages: List[Dict[str, str]], context: str, mode: str = "probl
         "Architecture Diagram, Workflow breakdown, or Tech Stack recommendation?"
     )
 
-def generate_stage1_deliverable(deliverable_type: str, context: str, conversation_notes: Optional[str] = None) -> Dict[str, Any]:
+def generate_stage1_deliverable(
+    deliverable_type: str,
+    context: str,
+    conversation_notes: Optional[str] = None,
+    provider: str = "groq",
+    model: Optional[str] = None,
+    custom_key: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Generates on-demand deliverables:
     - architecture: Mermaid diagram and component breakdown
@@ -196,7 +223,7 @@ def generate_stage1_deliverable(deliverable_type: str, context: str, conversatio
     - db_api_design: Schemas and REST/GraphQL specs
     - pitch_deck: Slide-by-slide structure with speaking notes
     """
-    client = _get_groq_client()
+    from app.llm.provider_manager import execute_multi_provider_chat
     extra_notes = f"\nConversation / Refinements:\n{conversation_notes[:2000]}" if conversation_notes else ""
 
     prompts = {
@@ -271,22 +298,22 @@ def generate_stage1_deliverable(deliverable_type: str, context: str, conversatio
 
     instruction = prompts.get(deliverable_type, prompts["architecture"])
 
-    if client:
-        try:
-            resp, _ = execute_groq_chat_completion(
-                client=client,
-                messages=[
-                    {"role": "system", "content": f"You are DevLens AI deliverable generator.\n{instruction}"},
-                    {"role": "user", "content": f"Context:\n{context[:4000]}{extra_notes}"}
-                ],
-                temperature=0.2,
-                response_format={"type": "json_object"},
-                max_tokens=2200
-            )
-            raw = resp.choices[0].message.content.strip()
-            return json.loads(raw)
-        except Exception as e:
-            print(f"[StageServices] generate_stage1_deliverable error: {e}")
+    try:
+        raw = execute_multi_provider_chat(
+            provider=provider or "groq",
+            model=model or "",
+            messages=[{"role": "user", "content": f"Context:\n{context[:4000]}{extra_notes}"}],
+            system_prompt=f"You are DevLens AI deliverable generator.\n{instruction}",
+            custom_key=custom_key,
+            temperature=0.2,
+            max_tokens=2400
+        )
+        json_match = re.search(r"\{[\s\S]*\}", raw)
+        if json_match:
+            return json.loads(json_match.group(0))
+        return json.loads(raw)
+    except Exception as e:
+        print(f"[StageServices] generate_stage1_deliverable error: {e}")
 
     # Fallback response templates
     if deliverable_type == "architecture":

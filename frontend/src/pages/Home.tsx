@@ -30,11 +30,15 @@ import LandingPage from '../components/LandingPage';
 import LoadingScreen from '../components/LoadingScreen';
 import MainWorkspace from '../components/MainWorkspace';
 import Stage1Workspace from '../components/Stage1Workspace';
+import ProblemStatementSubmission from '../components/ProblemStatementSubmission';
+import AIWorkspaceChat from '../components/AIWorkspaceChat';
+import OpenInnovationWorkspace from '../components/OpenInnovationWorkspace';
 import DefenseSuite from '../components/DefenseSuite';
 import { API_BASE_URL } from '../lib/apiClient';
+import { getActiveProjectId, setActiveProjectId } from '../lib/projectStore';
 
 // ── Navigation section type ────────────────────────────────────────────────
-export type WorkspaceMode = 'main' | 'stage1' | 'stage2';
+export type WorkspaceMode = 'main' | 'stage1' | 'stage1_ps' | 'stage1_chat' | 'stage1_innovation' | 'stage2';
 type Section = 'overview' | 'defense' | 'files' | 'search' | 'architecture' | 'health' | 'onboarding';
 
 interface NavItem { id: Exclude<Section, 'onboarding'>; label: string; icon: React.ReactNode; }
@@ -141,7 +145,61 @@ import { useQualityScores } from '../hooks/useQualityScores';
 
 export default function Home() {
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('main');
+  const [activeChatProjectId, setActiveChatProjectId] = useState<string>(() => getActiveProjectId() || '');
   const [sharedProblemStatement, setSharedProblemStatement] = useState<string>('');
+
+  // ── URL Hash Navigation & Synchronization ──────────────────────────────────
+  const navigateTo = useCallback((mode: WorkspaceMode, projId?: string) => {
+    setWorkspaceMode(mode);
+    if (mode === 'stage1' || mode === 'stage1_ps') {
+      window.location.hash = '#/explore/ps';
+    } else if (mode === 'stage1_chat') {
+      const targetId = projId || activeChatProjectId || getActiveProjectId() || '';
+      if (targetId) {
+        setActiveChatProjectId(targetId);
+        setActiveProjectId(targetId);
+        window.location.hash = `#/explore/chat/${targetId}`;
+      } else {
+        window.location.hash = '#/explore/chat';
+      }
+    } else if (mode === 'stage1_innovation') {
+      window.location.hash = '#/explore/innovation';
+    } else if (mode === 'stage2') {
+      window.location.hash = '#/analyze';
+    } else if (mode === 'main') {
+      window.location.hash = '#/main';
+    }
+  }, [activeChatProjectId]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/explore/chat/')) {
+        const id = hash.replace('#/explore/chat/', '').trim();
+        if (id) {
+          setActiveChatProjectId(id);
+          setActiveProjectId(id);
+        }
+        setWorkspaceMode('stage1_chat');
+      } else if (hash === '#/explore/chat') {
+        const storedId = getActiveProjectId();
+        if (storedId) setActiveChatProjectId(storedId);
+        setWorkspaceMode('stage1_chat');
+      } else if (hash === '#/explore/innovation') {
+        setWorkspaceMode('stage1_innovation');
+      } else if (hash === '#/explore/ps' || hash === '#/explore') {
+        setWorkspaceMode('stage1_ps');
+      } else if (hash === '#/analyze') {
+        setWorkspaceMode('stage2');
+      } else if (hash === '#/main' || hash === '#/' || !hash) {
+        setWorkspaceMode('main');
+      }
+    };
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -525,7 +583,10 @@ export default function Home() {
   if (workspaceMode === 'main') {
     return (
       <MainWorkspace
-        onSelectStage={(stage) => setWorkspaceMode(stage)}
+        onSelectStage={(stage) => {
+          if (stage === 'stage1') navigateTo('stage1_ps');
+          else navigateTo('stage2');
+        }}
         hasProblemStatement={!!sharedProblemStatement.trim()}
         isRepoAnalyzed={isAnalyzed}
         repoName={repoName}
@@ -533,13 +594,40 @@ export default function Home() {
     );
   }
 
-  if (workspaceMode === 'stage1') {
+  // Page A: Dedicated Problem Statement Submission (Chat interface removed)
+  if (workspaceMode === 'stage1' || workspaceMode === 'stage1_ps') {
     return (
-      <Stage1Workspace
-        onBackToMain={() => setWorkspaceMode('main')}
-        onGoToStage2={() => setWorkspaceMode('stage2')}
-        sharedProblemStatement={sharedProblemStatement}
-        setSharedProblemStatement={setSharedProblemStatement}
+      <ProblemStatementSubmission
+        initialProjectId={activeChatProjectId}
+        onBackToMain={() => navigateTo('main')}
+        onGoToOpenInnovation={() => navigateTo('stage1_innovation')}
+        onContinueToChat={(projId) => {
+          setActiveChatProjectId(projId);
+          setActiveProjectId(projId);
+          navigateTo('stage1_chat', projId);
+        }}
+      />
+    );
+  }
+
+  // Page B: Dedicated AI Planning Workspace Chat
+  if (workspaceMode === 'stage1_chat') {
+    return (
+      <AIWorkspaceChat
+        projectId={activeChatProjectId}
+        onBackToPS={() => navigateTo('stage1_ps')}
+        onGoToStage2={() => navigateTo('stage2')}
+      />
+    );
+  }
+
+  // Stage 1 Open Innovation Track (Separate Entry Point)
+  if (workspaceMode === 'stage1_innovation') {
+    return (
+      <OpenInnovationWorkspace
+        onBackToMain={() => navigateTo('main')}
+        onGoToPS={() => navigateTo('stage1_ps')}
+        onGoToStage2={() => navigateTo('stage2')}
       />
     );
   }
@@ -565,8 +653,8 @@ export default function Home() {
         isLoading={isLoading}
         loadingPhase={loadingPhase}
         error={error}
-        onBackToMain={() => setWorkspaceMode('main')}
-        onGoToStage1={() => setWorkspaceMode('stage1')}
+        onBackToMain={() => navigateTo('main')}
+        onGoToStage1={() => navigateTo('stage1_ps')}
       />
     );
   }
@@ -1143,7 +1231,7 @@ export default function Home() {
         {/* Right: Action Controls */}
         <div className={`flex items-center gap-2 shrink-0 transition-opacity duration-250 ${isNavOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
           <button
-            onClick={() => setWorkspaceMode('stage1')}
+            onClick={() => navigateTo('stage1_ps')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E85D2C]/40 bg-[#E85D2C]/10 hover:bg-[#E85D2C] text-[#E85D2C] hover:text-white text-xs font-mono font-semibold transition-all cursor-pointer shadow-2xs"
             title="Switch to Stage 1 — Explore & Plan"
           >
