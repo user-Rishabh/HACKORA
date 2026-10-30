@@ -314,6 +314,23 @@ interface ModelOption {
     } else {
       setActiveProjectId(targetId);
     }
+    const current = targetId ? getProject(targetId) : null;
+    if (current && current.explanation && current.messages.length === 0) {
+      const e = current.explanation as any;
+      const list = (value: unknown) => Array.isArray(value) ? value.map((item) => `- ${item}`).join('\n') : '';
+      const initialExplanation = [
+        `## ${e.title || 'Problem statement explained'}`,
+        `### Problem overview and objective\n${e.overview || e.overview_objective || ''}`,
+        `### Actual problem to solve\n${e.coreProblem || e.actual_problem || ''}`,
+        `### Target users\n${list(e.targetUsers || e.target_users_stakeholders) || '- Not stated explicitly in the brief.'}`,
+        `### Requirements and deliverables\n${list(e.requirements || e.stated_requirements) || '- Review the source statement for explicit deliverables.'}`,
+        `### Constraints\n${list(e.constraints || e.constraints_limitations) || '- No explicit constraints were extracted.'}`,
+        `### Expected outcomes\n${e.successCriteria || e.success_judging_criteria || 'The brief does not state measurable success criteria.'}`,
+        `### Important concepts\n${list(e.importantTerms || e.important_terms) || '- None identified.'}`,
+        'I have kept the brief’s requirements separate from recommendations. What would you like to explore next?',
+      ].join('\n\n');
+      updateProject(targetId!, { messages: [{ id: `msg_${Date.now()}`, role: 'assistant', content: initialExplanation, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] });
+    }
     onContinueToChat(targetId);
   };
 

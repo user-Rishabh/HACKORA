@@ -28,21 +28,73 @@ def _get_groq_client() -> Optional[Any]:
 # STAGE 1: EXPLORE & PLAN
 # ==============================================================================
 
+def format_analysis_to_markdown(data: Dict[str, Any]) -> str:
+    """
+    Transforms structured problem statement analysis fields into a clean,
+    beautifully formatted ChatGPT / Claude style Markdown document.
+    """
+    lines = []
+    title = data.get("title") or "Problem Statement Analysis"
+    lines.append(f"## 🎯 {title}\n")
+
+    if data.get("overview"):
+        lines.append(f"### 📋 Problem Overview\n{data['overview']}\n")
+
+    if data.get("actual_problem"):
+        lines.append(f"### 🔍 Actual Problem to Solve\n{data['actual_problem']}\n")
+
+    if data.get("target_users"):
+        users = data["target_users"]
+        if isinstance(users, list):
+            lines.append("### 👥 Target Users & Stakeholders\n" + "\n".join(f"- {u}" for u in users) + "\n")
+        elif isinstance(users, str):
+            lines.append(f"### 👥 Target Users & Stakeholders\n{users}\n")
+
+    if data.get("requirements"):
+        reqs = data["requirements"]
+        if isinstance(reqs, list):
+            lines.append("### 📋 Requirements & Deliverables\n" + "\n".join(f"- {r}" for r in reqs) + "\n")
+        elif isinstance(reqs, str):
+            lines.append(f"### 📋 Requirements & Deliverables\n{reqs}\n")
+
+    if data.get("constraints"):
+        consts = data["constraints"]
+        if isinstance(consts, list):
+            lines.append("### ⚠️ Constraints & Limitations\n" + "\n".join(f"- {c}" for c in consts) + "\n")
+        elif isinstance(consts, str):
+            lines.append(f"### ⚠️ Constraints & Limitations\n{consts}\n")
+
+    if data.get("expected_outcomes"):
+        outs = data["expected_outcomes"]
+        if isinstance(outs, list):
+            lines.append("### 🏆 Expected Outcomes & Success Metrics\n" + "\n".join(f"- {o}" for o in outs) + "\n")
+        elif isinstance(outs, str):
+            lines.append(f"### 🏆 Expected Outcomes & Success Metrics\n{outs}\n")
+
+    if data.get("important_terms"):
+        terms = data["important_terms"]
+        if isinstance(terms, list):
+            lines.append("### 💡 Important Technical Concepts\n" + " ".join(f"`{t}`" for t in terms) + "\n")
+        elif isinstance(terms, str):
+            lines.append(f"### 💡 Important Technical Concepts\n{terms}\n")
+
+    return "\n".join(lines).strip()
+
 def explain_problem_statement(text: str, provider: str = "groq", model: Optional[str] = None, custom_key: Optional[str] = None) -> Dict[str, Any]:
     """
     Analyzes a raw problem statement text and produces a structured, detailed
     explanation covering all required facets while explicitly distinguishing
     extracted facts from inferred recommendations.
+    Provides structured JSON and a ready-to-render Markdown representation.
     """
     from app.llm.provider_manager import execute_multi_provider_chat, PROVIDER_CATALOG
     clean_text = text.strip()
 
-    # Resolve valid model for selected provider (prevent using invalid model across providers)
     pid = (provider or "groq").lower()
     p_info = PROVIDER_CATALOG.get(pid)
     valid_model = model
     if not valid_model or (p_info and not any(m["id"] == valid_model for m in p_info.get("models", []))):
-        valid_model = p_info.get("default_model", "llama-3.3-70b-versatile") if p_info else "llama-3.3-70b-versatile"
+        valid_model = p_info.get("default_model", "openai/gpt-oss-120b") if p_info else "openai/gpt-oss-120b"
 
     system_prompt = (
         "You are an elite hackathon mentor and technical judge for DevLens AI. "
@@ -50,17 +102,19 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
         "forensic breakdown in valid JSON format. Follow these strict rules:\n"
         "1. Do NOT invent requirements or judging criteria that are absent from the source document.\n"
         "2. Explicitly distinguish stated facts in the source document from inferred recommendations.\n"
+        "3. Provide both structured JSON fields and a comprehensive 'markdown_content' field using clear headings (##) and bullet points.\n"
+        "4. Do NOT prematurely force a specific tech stack or implementation plan. Focus on helping the user deeply understand the problem requirements.\n"
         "Return valid JSON matching this exact structure:\n"
         "{\n"
         "  \"title\": \"Clear concise title for the project or problem\",\n"
-        "  \"overview_objective\": \"Executive synopsis of the problem and high-level objective stated in the document\",\n"
+        "  \"overview\": \"Executive synopsis of the problem and high-level objective stated in the document\",\n"
         "  \"actual_problem\": \"The root cause, core technical/operational challenge, and why it is difficult to solve\",\n"
-        "  \"target_users_stakeholders\": [\"List\", \"of\", \"target users, personas, or beneficiaries stated or directly impacted\"],\n"
-        "  \"stated_requirements\": [\"Requirements, features, and deliverables explicitly mandated by the source document\"],\n"
-        "  \"inferred_recommendations\": [\"Architectural or implementation recommendations inferred to satisfy the requirements (clearly marked as recommendations)\"],\n"
-        "  \"constraints_limitations\": [\"Technical, operational, hardware, compliance, latency, or scale constraints stated in the document\"],\n"
-        "  \"success_judging_criteria\": \"Evaluation criteria, benchmarks, or judging rubrics stated in the document (or 'No explicit judging criteria provided in source document')\",\n"
-        "  \"important_terms\": [\"Important domain terms, acronyms, or concepts that need clarification for technical implementation\"]\n"
+        "  \"target_users\": [\"List of target users, personas, or beneficiaries stated or directly impacted\"],\n"
+        "  \"requirements\": [\"Requirements, features, and deliverables explicitly mandated by the source document\"],\n"
+        "  \"constraints\": [\"Technical, operational, hardware, compliance, latency, or scale constraints stated in the document\"],\n"
+        "  \"expected_outcomes\": [\"Measurable outcomes, success metrics, or judging rubrics stated in the document\"],\n"
+        "  \"important_terms\": [\"Important domain terms, acronyms, or concepts that need clarification\"],\n"
+        "  \"markdown_content\": \"Full markdown breakdown with headings: ## Problem Overview, ## Main Objective, ## Actual Problem to Solve, ## Target Users & Stakeholders, ## Requirements & Deliverables, ## Constraints & Limitations, ## Expected Outcomes, ## Key Technical Concepts\"\n"
         "}"
     )
 
@@ -72,69 +126,39 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
             system_prompt=system_prompt,
             custom_key=custom_key,
             temperature=0.15,
-            max_tokens=2200
+            max_tokens=2048
         )
-        # Parse JSON from raw output
         json_match = re.search(r"\{[\s\S]*\}", raw)
         if json_match:
-            parsed = json.loads(json_match.group(0))
-            if parsed.get("title") and ("%PDF" in parsed["title"] or "/FlateDecode" in parsed["title"]):
-                parsed["title"] = "Problem Statement Analysis"
-            return parsed
-        parsed = json.loads(raw)
-        if parsed.get("title") and ("%PDF" in parsed["title"] or "/FlateDecode" in parsed["title"]):
-            parsed["title"] = "Problem Statement Analysis"
-        return parsed
+            try:
+                parsed = json.loads(json_match.group(0))
+                if parsed.get("title") and ("%PDF" in parsed["title"] or "/FlateDecode" in parsed["title"]):
+                    parsed["title"] = "Problem Statement Analysis"
+                if not parsed.get("markdown_content"):
+                    parsed["markdown_content"] = format_analysis_to_markdown(parsed)
+                return parsed
+            except Exception:
+                pass
+        
+        # If raw text was already plain markdown, use it directly; otherwise construct markdown
+        return {
+            "title": "Problem Statement Analysis",
+            "overview": clean_text[:300],
+            "markdown_content": raw
+        }
     except Exception as e:
-        print(f"[StageServices] explain_problem_statement error: {e}")
+        raise RuntimeError(f"Problem statement explanation failed: {str(e)}") from e
 
-    # Fallback heuristic parser if model call fails
-    clean_lines = [l.strip() for l in clean_text.split("\n") if l.strip() and not l.startswith("%PDF") and not "/Filter" in l and not "/Flate" in l]
-    title = clean_lines[0][:80] if clean_lines else "Problem Statement Analysis"
-    if "%PDF" in title or "/FlateDecode" in title or "stream" in title:
-        title = "Problem Statement Analysis"
-
-    overview = clean_text[:350]
-    if "%PDF" in overview or "/Filter" in overview:
-        overview = "Extracted challenge requirements and technical objectives from submitted problem statement."
-
-    return {
-        "title": title,
-        "overview_objective": overview + ("..." if len(clean_text) > 350 and not overview.endswith(".") else ""),
-        "actual_problem": "Addressing inefficiencies, lack of visibility, and manual coordination in the domain.",
-        "target_users_stakeholders": ["Developers & Engineering Teams", "Operational Stakeholders", "End-Users"],
-        "stated_requirements": [
-            "Data ingestion and document parsing capability",
-            "Structured analytical summary engine",
-            "Exportable technical reports and interactive workspace"
-        ],
-        "inferred_recommendations": [
-            "Implement asynchronous queue for long-running document analysis",
-            "Expose typed REST endpoints for modular client consumption",
-            "Introduce client-side persistence for session durability"
-        ],
-        "constraints_limitations": [
-            "Low-latency response budget (< 1000ms for UI actions)",
-            "Strict secret redaction and credential protection"
-        ],
-        "success_judging_criteria": "No explicit judging criteria provided in source document. Evaluation will focus on technical depth, architecture defensibility, and functional execution.",
-        "important_terms": [
-            "AST (Abstract Syntax Tree): Syntactic representation of source code structure",
-            "RAG (Retrieval-Augmented Generation): Grounded contextual synthesis using indexed code chunks"
-        ]
-    }
-
-def explore_open_innovation(prompt: str) -> Dict[str, Any]:
+def explore_open_innovation(prompt: str, provider: str = "groq", model: Optional[str] = None, custom_key: Optional[str] = None) -> Dict[str, Any]:
     """
     Researches an open-ended idea, identifying existing competitors/solutions,
     their critical limitations, and defensible opportunities for differentiation.
     """
-    client = _get_groq_client()
     clean_prompt = prompt.strip()
 
     system_prompt = (
         "You are an expert venture architect and technical judge for DevLens AI. "
-        "Analyze the following open innovation topic or idea. Provide research-backed "
+        "Analyze the following open innovation topic or idea. No live web search tool is connected: do not claim that you performed current research, do not invent citations, and label named competitors or market claims as examples that require verification. Provide "
         "exploration of existing market solutions, their flaws/limitations, and high-impact "
         "angles for differentiation. Return valid JSON matching:\n"
         "{\n"
@@ -151,37 +175,13 @@ def explore_open_innovation(prompt: str) -> Dict[str, Any]:
         "}"
     )
 
-    if client:
-        try:
-            resp, _ = execute_groq_chat_completion(
-                client=client,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Open Innovation Prompt:\n\n{clean_prompt[:4000]}"}
-                ],
-                temperature=0.3,
-                response_format={"type": "json_object"},
-                max_tokens=1600
-            )
-            raw = resp.choices[0].message.content.strip()
-            return json.loads(raw)
-        except Exception as e:
-            print(f"[StageServices] explore_open_innovation LLM error: {e}")
-
-    return {
-        "refined_concept": f"AI-orchestrated workflow intelligence for: {clean_prompt[:80]}",
-        "market_context": "Rapid AI adoption has highlighted significant gaps in contextual grounding and developer friction.",
-        "existing_solutions": [
-            {"name": "Traditional Cloud Dashboards", "approach": "Static metrics and manual query builders", "limitation": "High cognitive load, lack of automated reasoning"},
-            {"name": "Generic Chat Assistants", "approach": "Prompt-based generation without deep codebase context", "limitation": "Hallucinations, shallow understanding of complex dependency graphs"}
-        ],
-        "differentiation_opportunities": [
-            {"usp": "Real-time Grounded Graph Analysis", "technical_edge": "Combines AST parsing with hybrid vector search for verifiable citations."},
-            {"usp": "Autonomous Defense & Compliance Engine", "technical_edge": "Preempts technical evaluation rubrics with simulated peer review."}
-        ],
-        "target_early_adopters": ["Autonomous developers", "Hackathon builders", "Tech leads refactoring legacy stacks"],
-        "suggested_mvp_scope": ["Context ingestion pipeline", "Grounded AI exploration chat", "Automated technical blueprint export"]
-    }
+    from app.llm.provider_manager import execute_multi_provider_chat
+    raw = execute_multi_provider_chat(
+        provider=provider, model=model or "", messages=[{"role": "user", "content": f"Open Innovation Prompt:\n\n{clean_prompt[:4000]}"}],
+        system_prompt=system_prompt, custom_key=custom_key, temperature=0.3, max_tokens=1600,
+    )
+    match = re.search(r"\{[\s\S]*\}", raw)
+    return json.loads(match.group(0) if match else raw)
 
 def chat_stage1(
     messages: List[Dict[str, str]],
@@ -217,14 +217,7 @@ def chat_stage1(
             max_tokens=1800
         )
     except Exception as e:
-        print(f"[StageServices] chat_stage1 multi-provider error: {e}")
-
-    return (
-        "Based on your context, the primary technical consideration is architecting a clean separation "
-        "between the ingestion layer and the reasoning engine. Consider choosing a lightweight FastAPI backend "
-        "with asynchronous worker queues and a typed React frontend. Would you like me to generate a complete "
-        "Architecture Diagram, Workflow breakdown, or Tech Stack recommendation?"
-    )
+        raise RuntimeError("Chat request failed. Check the provider key, model, and quota.") from e
 
 def generate_stage1_deliverable(
     deliverable_type: str,
@@ -235,23 +228,65 @@ def generate_stage1_deliverable(
     custom_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Generates on-demand deliverables:
-    - architecture: Mermaid diagram and component breakdown
-    - workflows: User and system flow
-    - tech_stack: Recommended frameworks, databases, and trade-offs
-    - implementation_plan: Phased sprint milestones
-    - db_api_design: Schemas and REST/GraphQL specs
-    - pitch_deck: Slide-by-slide structure with speaking notes
+    Generates on-demand deliverables across 10 specialized project tools:
+    1. research / competitor_research: Existing solutions, limitations, and verifiable citations
+    2. solution_comparison: 3-way comparative matrix with trade-offs
+    3. usp_generation: Unique selling propositions and competitive moats
+    4. architecture: Mermaid flowchart and component breakdown
+    5. workflows: Mermaid sequence / flow diagram and user journeys
+    6. tech_stack: Recommended frameworks, databases, and defensible trade-offs
+    7. implementation_plan: Phased 24-48h hackathon sprint milestones
+    8. db_api_design: Database entity schemas and REST API specifications
+    9. ppt_content / pitch_deck: 8-slide presentation blueprint and talking points
+    10. pitch_prep: 30-second elevator hook, 2-minute demo path, and tough judge Q&A defenses
     """
     from app.llm.provider_manager import execute_multi_provider_chat
     extra_notes = f"\nConversation / Refinements:\n{conversation_notes[:2000]}" if conversation_notes else ""
 
     prompts = {
+        "research": (
+            "Conduct structured competitive research based on this problem context. "
+            "Identify real-world existing solutions and current approaches. "
+            "Highlight limitations and gaps in current approaches. "
+            "Explain clear opportunities for differentiation. "
+            "Do not fabricate sources or invent non-existent packages. Return valid JSON:\n"
+            "{\n"
+            "  \"title\": \"Competitive & Technical Research\",\n"
+            "  \"summary\": \"Executive summary of the competitive landscape\",\n"
+            "  \"existing_solutions\": [\n"
+            "    {\"name\": \"Solution / Tool Name\", \"category\": \"Open Source / SaaS / Incumbent\", \"approach\": \"How it solves the problem\", \"limitations\": \"Known gaps, cost, or technical bottlenecks\"}\n"
+            "  ],\n"
+            "  \"market_gaps\": [\"Gaps and unmet needs in current offerings\"],\n"
+            "  \"differentiation_angles\": [\"Specific opportunities to stand out\"]\n"
+            "}"
+        ),
+        "solution_comparison": (
+            "Generate a rigorous 3-way solution comparison matrix. "
+            "Compare Approach A (Traditional / Off-the-shelf), Approach B (Microservices / Complex Enterprise), and Approach C (Recommended DevLens Architecture). Return valid JSON:\n"
+            "{\n"
+            "  \"title\": \"Solution Comparison Matrix\",\n"
+            "  \"approaches\": [\n"
+            "    {\"name\": \"Approach Name\", \"description\": \"Overview\", \"pros\": [\"pro 1\", \"pro 2\"], \"cons\": [\"con 1\", \"con 2\"], \"complexity\": \"Low/Medium/High\", \"cost\": \"Low/Medium/High\", \"latency\": \"Target latency\", \"verdict\": \"Why chosen or rejected\"}\n"
+            "  ],\n"
+            "  \"recommended_choice\": \"Clear recommendation with technical justification\"\n"
+            "}"
+        ),
+        "usp_generation": (
+            "Generate defensible Unique Selling Propositions (USPs) and competitive moats for hackathon judges. Return valid JSON:\n"
+            "{\n"
+            "  \"title\": \"Unique Selling Propositions (USPs)\",\n"
+            "  \"core_value_hook\": \"One unforgettable sentence capturing why this project wins\",\n"
+            "  \"usps\": [\n"
+            "    {\"headline\": \"USP Title\", \"description\": \"Detailed explanation\", \"technical_defensibility\": \"Why competitors cannot easily copy it\", \"judge_appeal\": \"Why hackathon judges will award points for this\"}\n"
+            "  ],\n"
+            "  \"unfair_advantage\": \"What special technical or domain insight sets this team apart\"\n"
+            "}"
+        ),
         "architecture": (
             "Generate a system architecture blueprint. Return valid JSON:\n"
             "{\n"
             "  \"title\": \"Architecture Blueprint\",\n"
-            "  \"mermaid\": \"graph TD\\n  Client[React Client] --> API[FastAPI Gateway]\\n...\",\n"
+            "  \"mermaid\": \"graph TD\\n  Client[React Client] --> API[FastAPI Gateway]\\n  API --> Search[Hybrid Vector & AST]\\n  API --> DB[(Supabase PostgreSQL)]\\n  API --> LLM[Multi-Provider Engine]\",\n"
             "  \"components\": [\n"
             "    {\"name\": \"Component Name\", \"role\": \"Role & Responsibility\", \"tech\": \"Suggested tech\"}\n"
             "  ],\n"
@@ -263,6 +298,7 @@ def generate_stage1_deliverable(
             "Generate user journeys and system event workflows. Return valid JSON:\n"
             "{\n"
             "  \"title\": \"System Workflows & User Journey\",\n"
+            "  \"mermaid\": \"sequenceDiagram\\n  autonumber\\n  actor User\\n  participant Client as React Client\\n  participant API as FastAPI Backend\\n  participant DB as Database\\n  User->>Client: Uploads problem statement\\n  Client->>API: POST /stage1/extract-document\\n  API->>DB: Persist context\\n  API-->>Client: Return extracted text\\n  Client->>API: POST /stage1/chat\\n  API-->>Client: Streamed response\",\n"
             "  \"primary_flow\": [\n"
             "    {\"step\": 1, \"actor\": \"User/System\", \"action\": \"What happens\", \"state_change\": \"Impact on system state\"}\n"
             "  ],\n"
@@ -303,7 +339,7 @@ def generate_stage1_deliverable(
             "  ]\n"
             "}"
         ),
-        "pitch_deck": (
+        "ppt_content": (
             "Generate an 8-slide presentation outline and demo script. Return valid JSON:\n"
             "{\n"
             "  \"title\": \"Pitch Deck & Presentation Blueprint\",\n"
@@ -314,9 +350,27 @@ def generate_stage1_deliverable(
             "  \"demo_golden_path\": \"Step-by-step sequence of actions for a flawless 2-minute live demo\"\n"
             "}"
         ),
+        "pitch_prep": (
+            "Generate an aggressive pitch preparation guide and judge defense strategy. Return valid JSON:\n"
+            "{\n"
+            "  \"title\": \"Pitch & Defense Preparation\",\n"
+            "  \"elevator_pitch\": \"30-second compelling elevator speech\",\n"
+            "  \"live_demo_sequence\": [\"Step 1: Open workspace...\", \"Step 2: Show real-time streaming...\", \"Step 3: Highlight technical moat...\"],\n"
+            "  \"anticipated_judge_questions\": [\n"
+            "    {\"question\": \"Tough question a judge will ask\", \"intent\": \"What they are testing\", \"recommended_defense\": \"Exact winning answer\"}\n"
+            "  ]\n"
+            "}"
+        ),
     }
 
-    instruction = prompts.get(deliverable_type, prompts["architecture"])
+    # Normalize deliverable aliases
+    type_alias = deliverable_type.lower()
+    if type_alias == "competitor_research":
+        type_alias = "research"
+    elif type_alias in ("pitch_deck", "presentation"):
+        type_alias = "ppt_content"
+
+    instruction = prompts.get(type_alias, prompts["architecture"])
 
     try:
         raw = execute_multi_provider_chat(
@@ -333,7 +387,7 @@ def generate_stage1_deliverable(
             return json.loads(json_match.group(0))
         return json.loads(raw)
     except Exception as e:
-        print(f"[StageServices] generate_stage1_deliverable error: {e}")
+        raise RuntimeError(f"Could not generate {deliverable_type}. Check provider credentials and model settings.") from e
 
     # Fallback response templates
     if deliverable_type == "architecture":

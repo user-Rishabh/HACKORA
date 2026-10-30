@@ -4,14 +4,34 @@
 
 export interface PSExplanation {
   title: string;
-  overview_objective: string;
-  actual_problem: string;
-  target_users_stakeholders: string[];
-  stated_requirements: string[];
-  inferred_recommendations: string[];
-  constraints_limitations: string[];
-  success_judging_criteria: string;
-  important_terms: string[];
+  overview?: string;
+  overview_objective?: string;
+  actual_problem?: string;
+  coreProblem?: string;
+  target_users?: string[];
+  target_users_stakeholders?: string[];
+  targetUsers?: string[];
+  requirements?: string[];
+  stated_requirements?: string[];
+  inferred_recommendations?: string[];
+  inferredRecommendations?: string[];
+  constraints?: string[];
+  constraints_limitations?: string[];
+  expected_outcomes?: string[];
+  success_judging_criteria?: string;
+  successCriteria?: string[];
+  important_terms?: string[];
+  importantTerms?: string[];
+  markdown_content?: string;
+}
+
+export interface AttachedFileMeta {
+  id: string;
+  name: string;
+  size: number;
+  wordCount?: number;
+  type?: string;
+  extractedText?: string;
 }
 
 export interface ChatMessage {
@@ -19,6 +39,16 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  attachments?: AttachedFileMeta[];
+  isError?: boolean;
+}
+
+export interface ConfirmedDecisions {
+  solution?: string;
+  usps?: string[];
+  techStack?: string[];
+  architectureNotes?: string[];
+  keyDecisions?: string[];
 }
 
 export interface Project {
@@ -30,6 +60,9 @@ export interface Project {
   deliverables: Record<string, any>;
   provider: string;
   model: string;
+  mode?: 'problem_statement' | 'open_innovation';
+  attachedFiles?: AttachedFileMeta[];
+  confirmedDecisions?: ConfirmedDecisions;
   createdAt: number;
   updatedAt: number;
 }
@@ -40,9 +73,28 @@ export interface ProviderCredential {
   validatedAt?: number;
 }
 
-const STORAGE_KEY_PROJECTS = 'devlens_projects_v1';
+const STORAGE_KEY_PROJECTS = 'devlens_projects_v2';
+const STORAGE_KEY_LEGACY_PROJECTS = 'devlens_projects_v1';
 const STORAGE_KEY_ACTIVE_PROJECT = 'devlens_active_project_id';
 const STORAGE_KEY_PROVIDERS = 'devlens_provider_credentials_v1';
+
+// ------------------------------------------------------------------------------
+// Helper: Sanitize API Key (remove quotes, Bearer prefix, whitespace)
+// ------------------------------------------------------------------------------
+
+export function sanitizeApiKey(key: string): string {
+  if (!key) return '';
+  let cleaned = key.trim();
+  // Strip surrounding quotes if user copied e.g. "gsk_..."
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  // Strip optional "Bearer " prefix
+  if (cleaned.toLowerCase().startsWith('bearer ')) {
+    cleaned = cleaned.slice(7).trim();
+  }
+  return cleaned;
+}
 
 // ------------------------------------------------------------------------------
 // Project Operations
@@ -50,7 +102,10 @@ const STORAGE_KEY_PROVIDERS = 'devlens_provider_credentials_v1';
 
 export function getAllProjects(): Project[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PROJECTS);
+    let raw = localStorage.getItem(STORAGE_KEY_PROJECTS);
+    if (!raw) {
+      raw = localStorage.getItem(STORAGE_KEY_LEGACY_PROJECTS);
+    }
     if (!raw) return [];
     return JSON.parse(raw) as Project[];
   } catch (e) {
@@ -82,29 +137,39 @@ export function saveProject(project: Project): void {
   }
 }
 
-export function createNewProject(data: {
+export function createNewProject(data?: {
   title?: string;
-  problemStatement: string;
+  problemStatement?: string;
   explanation?: PSExplanation | null;
   provider?: string;
   model?: string;
+  mode?: 'problem_statement' | 'open_innovation';
+  attachedFiles?: AttachedFileMeta[];
+  initialMessages?: ChatMessage[];
 }): Project {
   const id = `proj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
   const title =
-    data.title ||
-    (data.explanation && data.explanation.title) ||
-    data.problemStatement.slice(0, 40).replace(/[\r\n]+/g, ' ') ||
-    'Untitled Project';
+    data?.title ||
+    (data?.explanation && data.explanation.title) ||
+    (data?.problemStatement && data.problemStatement.slice(0, 45).replace(/[\r\n]+/g, ' ')) ||
+    'New Conversation';
 
   const newProject: Project = {
     id,
     title,
-    problemStatement: data.problemStatement,
-    explanation: data.explanation || null,
-    messages: [],
+    problemStatement: data?.problemStatement || '',
+    explanation: data?.explanation || null,
+    messages: data?.initialMessages || [],
     deliverables: {},
-    provider: data.provider || 'groq',
-    model: data.model || 'openai/gpt-oss-120b',
+    provider: data?.provider || 'groq',
+    model: data?.model || 'openai/gpt-oss-120b',
+    mode: data?.mode || 'problem_statement',
+    attachedFiles: data?.attachedFiles || [],
+    confirmedDecisions: {
+      usps: [],
+      techStack: [],
+      keyDecisions: [],
+    },
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -133,7 +198,8 @@ export function deleteProject(id: string): void {
     const projects = getAllProjects().filter((p) => p.id !== id);
     localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
     if (getActiveProjectId() === id) {
-      setActiveProjectId(null);
+      const nextId = projects.length > 0 ? projects[0].id : null;
+      setActiveProjectId(nextId);
     }
   } catch (e) {
     console.error('Failed to delete project:', e);
@@ -161,12 +227,16 @@ export function setActiveProjectId(id: string | null): void {
 }
 
 // ------------------------------------------------------------------------------
-// Provider Credentials Operations (Client Session Security)
+// Provider Credentials Operations (Persistent & Session Storage)
 // ------------------------------------------------------------------------------
 
 export function getSavedCredentials(): Record<string, ProviderCredential> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PROVIDERS);
+    // Check localStorage first so user credentials persist across refreshes, fallback to sessionStorage
+    let raw = localStorage.getItem(STORAGE_KEY_PROVIDERS);
+    if (!raw) {
+      raw = sessionStorage.getItem(STORAGE_KEY_PROVIDERS);
+    }
     if (!raw) return {};
     return JSON.parse(raw) as Record<string, ProviderCredential>;
   } catch {
@@ -180,13 +250,20 @@ export function saveProviderCredential(
   defaultModel?: string
 ): void {
   try {
+    const cleanedKey = sanitizeApiKey(apiKey);
+    if (!cleanedKey) return;
+
     const credentials = getSavedCredentials();
     credentials[provider.toLowerCase()] = {
-      apiKey: apiKey.trim(),
+      apiKey: cleanedKey,
       defaultModel,
       validatedAt: Date.now(),
     };
-    localStorage.setItem(STORAGE_KEY_PROVIDERS, JSON.stringify(credentials));
+
+    const serialized = JSON.stringify(credentials);
+    // Store in both localStorage (persists across page reloads) and sessionStorage
+    localStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
+    sessionStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
   } catch (e) {
     console.error('Failed to save provider credential:', e);
   }
@@ -196,7 +273,9 @@ export function removeProviderCredential(provider: string): void {
   try {
     const credentials = getSavedCredentials();
     delete credentials[provider.toLowerCase()];
-    localStorage.setItem(STORAGE_KEY_PROVIDERS, JSON.stringify(credentials));
+    const serialized = JSON.stringify(credentials);
+    localStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
+    sessionStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
   } catch (e) {
     console.error('Failed to remove provider credential:', e);
   }

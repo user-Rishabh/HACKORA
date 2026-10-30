@@ -35,7 +35,7 @@ import AIWorkspaceChat from '../components/AIWorkspaceChat';
 import OpenInnovationWorkspace from '../components/OpenInnovationWorkspace';
 import DefenseSuite from '../components/DefenseSuite';
 import { API_BASE_URL } from '../lib/apiClient';
-import { getActiveProjectId, setActiveProjectId } from '../lib/projectStore';
+import { getActiveProjectId, setActiveProjectId, createNewProject } from '../lib/projectStore';
 
 // ── Navigation section type ────────────────────────────────────────────────
 export type WorkspaceMode = 'main' | 'stage1' | 'stage1_ps' | 'stage1_chat' | 'stage1_innovation' | 'stage2';
@@ -584,7 +584,7 @@ export default function Home() {
     return (
       <MainWorkspace
         onSelectStage={(stage) => {
-          if (stage === 'stage1') navigateTo('stage1_ps');
+          if (stage === 'stage1') navigateTo('stage1_chat');
           else navigateTo('stage2');
         }}
         hasProblemStatement={!!sharedProblemStatement.trim()}
@@ -594,39 +594,25 @@ export default function Home() {
     );
   }
 
-  // Page A: Dedicated Problem Statement Submission (Chat interface removed)
-  if (workspaceMode === 'stage1' || workspaceMode === 'stage1_ps') {
-    return (
-      <ProblemStatementSubmission
-        initialProjectId={activeChatProjectId}
-        onBackToMain={() => navigateTo('main')}
-        onGoToOpenInnovation={() => navigateTo('stage1_innovation')}
-        onContinueToChat={(projId) => {
-          setActiveChatProjectId(projId);
-          setActiveProjectId(projId);
-          navigateTo('stage1_chat', projId);
-        }}
-      />
-    );
-  }
-
-  // Page B: Dedicated AI Planning Workspace Chat
-  if (workspaceMode === 'stage1_chat') {
+  // Stage 1: Conversational AI Workspace (Explore & Plan)
+  if (workspaceMode === 'stage1' || workspaceMode === 'stage1_ps' || workspaceMode === 'stage1_chat') {
     return (
       <AIWorkspaceChat
         projectId={activeChatProjectId}
-        onBackToPS={() => navigateTo('stage1_ps')}
+        initialMode="problem_statement"
+        onBackToMain={() => navigateTo('main')}
         onGoToStage2={() => navigateTo('stage2')}
       />
     );
   }
 
-  // Stage 1 Open Innovation Track (Separate Entry Point)
+  // Stage 1: Open Innovation Track (Same Unified Conversational Engine)
   if (workspaceMode === 'stage1_innovation') {
     return (
-      <OpenInnovationWorkspace
+      <AIWorkspaceChat
+        projectId={activeChatProjectId}
+        initialMode="open_innovation"
         onBackToMain={() => navigateTo('main')}
-        onGoToPS={() => navigateTo('stage1_ps')}
         onGoToStage2={() => navigateTo('stage2')}
       />
     );
@@ -654,7 +640,7 @@ export default function Home() {
         loadingPhase={loadingPhase}
         error={error}
         onBackToMain={() => navigateTo('main')}
-        onGoToStage1={() => navigateTo('stage1_ps')}
+        onGoToStage1={() => navigateTo('stage1_chat')}
       />
     );
   }
@@ -1231,7 +1217,7 @@ export default function Home() {
         {/* Right: Action Controls */}
         <div className={`flex items-center gap-2 shrink-0 transition-opacity duration-250 ${isNavOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
           <button
-            onClick={() => navigateTo('stage1_ps')}
+            onClick={() => navigateTo('stage1_chat')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E85D2C]/40 bg-[#E85D2C]/10 hover:bg-[#E85D2C] text-[#E85D2C] hover:text-white text-xs font-mono font-semibold transition-all cursor-pointer shadow-2xs"
             title="Switch to Stage 1 — Explore & Plan"
           >

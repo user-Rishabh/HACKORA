@@ -14,12 +14,14 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { API_BASE_URL } from '../lib/apiClient';
+import { getProviderCredential } from '../lib/projectStore';
+import ProviderSettingsModal from './ProviderSettingsModal';
 
 interface OpenInnovationWorkspaceProps {
   onBackToMain: () => void;
   onGoToPS: () => void;
   onGoToStage2: () => void;
-  onContinueToChat?: (customPrompt: string) => void;
+  onContinueToChat?: (customPrompt: string, provider: string, model: string) => void;
 }
 
 export default function OpenInnovationWorkspace({
@@ -33,6 +35,9 @@ export default function OpenInnovationWorkspace({
   const [innovationAnalysis, setInnovationAnalysis] = useState<any | null>(null);
   const [innovationError, setInnovationError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [provider, setProvider] = useState('groq');
+  const [model, setModel] = useState('llama-3.3-70b-versatile');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -50,10 +55,10 @@ export default function OpenInnovationWorkspace({
     setInnovationError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/stage1/explore-innovation`, {
+      const response = await fetch(`${API_BASE_URL}/api/stage1/explore-open-innovation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: innovationPrompt.trim() }),
+        body: JSON.stringify({ prompt: innovationPrompt.trim(), provider, model, api_key: getProviderCredential(provider)?.apiKey }),
       });
 
       if (!response.ok) {
@@ -62,7 +67,7 @@ export default function OpenInnovationWorkspace({
       }
 
       const data = await response.json();
-      setInnovationAnalysis(data);
+      setInnovationAnalysis({ ...data, incumbents: data.incumbents || data.existing_solutions || [] });
     } catch (err: any) {
       console.error(err);
       setInnovationError(err.message || 'Error communicating with DevLens AI backend.');
@@ -98,6 +103,12 @@ export default function OpenInnovationWorkspace({
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="px-3 py-1.5 rounded-xl border border-[#E5E1DA] hover:border-[#E85D2C] bg-white text-xs font-mono text-[#1A1D29] transition-colors cursor-pointer"
+            >
+              AI Provider: {provider}
+            </button>
             <button
               onClick={onGoToPS}
               className="px-3 py-1.5 rounded-xl border border-[#E5E1DA] hover:border-[#E85D2C] bg-white text-xs font-mono text-[#1A1D29] transition-colors cursor-pointer"
@@ -282,6 +293,11 @@ export default function OpenInnovationWorkspace({
                     </div>
                   </div>
                 )}
+                {onContinueToChat && (
+                  <button onClick={() => onContinueToChat(innovationPrompt.trim(), provider, model)} className="px-4 py-2 rounded-xl bg-[#1A1D29] hover:bg-[#E85D2C] text-white text-xs font-mono font-semibold">
+                    Continue exploring in chat
+                  </button>
+                )}
               </div>
             ) : (
               <div className="p-12 rounded-2xl bg-white border border-[#E5E1DA] shadow-2xs flex flex-col items-center justify-center text-center my-auto min-h-[350px]">
@@ -299,6 +315,7 @@ export default function OpenInnovationWorkspace({
           </div>
         </div>
       </main>
+      <ProviderSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} activeProvider={provider} activeModel={model} onSelectProviderModel={(nextProvider, nextModel) => { setProvider(nextProvider); setModel(nextModel); }} />
     </div>
   );
 }

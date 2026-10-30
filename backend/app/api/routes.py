@@ -7,7 +7,7 @@ import zlib
 import zipfile
 import xml.etree.ElementTree as ET
 from typing import Optional, Union
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Header
 from pydantic import BaseModel
 
 from app.ingestion.clone import clone_repo, validate_github_url
@@ -855,6 +855,7 @@ class MultiProviderChatRequest(BaseModel):
     system_prompt: Optional[str] = ""
     api_key: Optional[str] = None
     temperature: Optional[float] = 0.3
+    context: Optional[str] = ""
 
 class Stage1ExplainRequest(BaseModel):
     problem_statement: str
@@ -864,6 +865,9 @@ class Stage1ExplainRequest(BaseModel):
 
 class Stage1ExploreRequest(BaseModel):
     prompt: str
+    provider: Optional[str] = "groq"
+    model: Optional[str] = None
+    api_key: Optional[str] = None
 
 class Stage1ChatRequest(BaseModel):
     messages: list[dict]
@@ -913,12 +917,15 @@ def validate_provider_credentials(req: ValidateProviderRequest):
 
 
 @router.get("/llm/models")
-def get_provider_models(provider: str = Query(..., description="Provider ID"), api_key: Optional[str] = Query(None)):
+def get_provider_models(
+    provider: str = Query(..., description="Provider ID"),
+    x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
+):
     """
     Lists dynamically available models for a given provider.
     """
     from app.llm.provider_manager import list_available_models
-    return {"provider": provider, "models": list_available_models(provider, api_key)}
+    return {"provider": provider, "models": list_available_models(provider, x_provider_key)}
 
 
 @router.post("/llm/chat")
@@ -932,7 +939,7 @@ def run_multiprovider_chat(req: MultiProviderChatRequest):
             provider=req.provider,
             model=req.model or "",
             messages=req.messages,
-            system_prompt=req.system_prompt or "",
+            system_prompt="\n\n".join(part for part in [req.system_prompt or "", req.context or ""] if part),
             custom_key=req.api_key,
             temperature=req.temperature or 0.3
         )
@@ -942,19 +949,23 @@ def run_multiprovider_chat(req: MultiProviderChatRequest):
 
 
 @router.post("/llm/chat/stream")
-def stream_multiprovider_chat(req: MultiProviderChatRequest):
+def stream_multiprovider_chat(
+    req: MultiProviderChatRequest,
+    x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
+):
     """
     Streaming multi-provider chat using Server-Sent Events (SSE).
     """
-    from app.llm.provider_manager import stream_multi_provider_chat
+    from app.llm.provider_manager import stream_multi_provider_chat, clean_api_key
     from fastapi.responses import StreamingResponse
     try:
+        effective_key = clean_api_key(req.api_key or x_provider_key)
         generator = stream_multi_provider_chat(
             provider=req.provider,
             model=req.model or "",
             messages=req.messages,
-            system_prompt=req.system_prompt or "",
-            custom_key=req.api_key,
+            system_prompt="\n\n".join(p for p in [req.system_prompt or "", req.context or ""] if p),
+            custom_key=effective_key,
             temperature=req.temperature or 0.3
         )
         return StreamingResponse(generator, media_type="text/event-stream")
@@ -1049,25 +1060,31 @@ async def api_extract_document(file: UploadFile = File(...)):
 
 
 @router.post("/stage1/explain-ps")
-def api_explain_problem_statement(req: Stage1ExplainRequest):
+def api_explain_problem_statement(
+    req: Stage1ExplainRequest,
+    x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
+):
     """
     Stage 1: Explains a problem statement in structured, detailed bullet points.
     """
     if not req.problem_statement.strip():
         raise HTTPException(status_code=400, detail="Problem statement text cannot be empty.")
     from app.llm.stage_services import explain_problem_statement
+    from app.llm.provider_manager import clean_api_key
     try:
+        effective_key = clean_api_key(req.api_key or x_provider_key)
         return explain_problem_statement(
             text=req.problem_statement,
             provider=req.provider or "groq",
             model=req.model,
-            custom_key=req.api_key
+            custom_key=effective_key
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to explain problem statement: {str(e)}")
 
 
 @router.post("/stage1/explore-open-innovation")
+@router.post("/stage1/explore-innovation")
 def api_explore_open_innovation(req: Stage1ExploreRequest):
     """
     Stage 1: Explores an open innovation idea, finding existing solutions, limitations, and USPs.
@@ -1076,7 +1093,7 @@ def api_explore_open_innovation(req: Stage1ExploreRequest):
         raise HTTPException(status_code=400, detail="Idea prompt cannot be empty.")
     from app.llm.stage_services import explore_open_innovation
     try:
-        return explore_open_innovation(req.prompt)
+        return explore_open_innovation(req.prompt, provider=req.provider or "groq", model=req.model, custom_key=req.api_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to explore innovation topic: {str(e)}")
 
