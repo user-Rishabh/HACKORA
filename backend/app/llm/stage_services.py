@@ -34,8 +34,15 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
     explanation covering all required facets while explicitly distinguishing
     extracted facts from inferred recommendations.
     """
-    from app.llm.provider_manager import execute_multi_provider_chat
+    from app.llm.provider_manager import execute_multi_provider_chat, PROVIDER_CATALOG
     clean_text = text.strip()
+
+    # Resolve valid model for selected provider (prevent using invalid model across providers)
+    pid = (provider or "groq").lower()
+    p_info = PROVIDER_CATALOG.get(pid)
+    valid_model = model
+    if not valid_model or (p_info and not any(m["id"] == valid_model for m in p_info.get("models", []))):
+        valid_model = p_info.get("default_model", "llama-3.3-70b-versatile") if p_info else "llama-3.3-70b-versatile"
 
     system_prompt = (
         "You are an elite hackathon mentor and technical judge for DevLens AI. "
@@ -59,8 +66,8 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
 
     try:
         raw = execute_multi_provider_chat(
-            provider=provider or "groq",
-            model=model or "",
+            provider=pid,
+            model=valid_model,
             messages=[{"role": "user", "content": f"Problem Statement Document:\n\n{clean_text[:8000]}"}],
             system_prompt=system_prompt,
             custom_key=custom_key,
@@ -70,17 +77,30 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
         # Parse JSON from raw output
         json_match = re.search(r"\{[\s\S]*\}", raw)
         if json_match:
-            return json.loads(json_match.group(0))
-        return json.loads(raw)
+            parsed = json.loads(json_match.group(0))
+            if parsed.get("title") and ("%PDF" in parsed["title"] or "/FlateDecode" in parsed["title"]):
+                parsed["title"] = "Problem Statement Analysis"
+            return parsed
+        parsed = json.loads(raw)
+        if parsed.get("title") and ("%PDF" in parsed["title"] or "/FlateDecode" in parsed["title"]):
+            parsed["title"] = "Problem Statement Analysis"
+        return parsed
     except Exception as e:
         print(f"[StageServices] explain_problem_statement error: {e}")
 
     # Fallback heuristic parser if model call fails
-    lines = [l.strip() for l in clean_text.split("\n") if l.strip()]
-    title = lines[0][:80] if lines else "Problem Statement Analysis"
+    clean_lines = [l.strip() for l in clean_text.split("\n") if l.strip() and not l.startswith("%PDF") and not "/Filter" in l and not "/Flate" in l]
+    title = clean_lines[0][:80] if clean_lines else "Problem Statement Analysis"
+    if "%PDF" in title or "/FlateDecode" in title or "stream" in title:
+        title = "Problem Statement Analysis"
+
+    overview = clean_text[:350]
+    if "%PDF" in overview or "/Filter" in overview:
+        overview = "Extracted challenge requirements and technical objectives from submitted problem statement."
+
     return {
         "title": title,
-        "overview_objective": clean_text[:350] + ("..." if len(clean_text) > 350 else ""),
+        "overview_objective": overview + ("..." if len(clean_text) > 350 and not overview.endswith(".") else ""),
         "actual_problem": "Addressing inefficiencies, lack of visibility, and manual coordination in the domain.",
         "target_users_stakeholders": ["Developers & Engineering Teams", "Operational Stakeholders", "End-Users"],
         "stated_requirements": [

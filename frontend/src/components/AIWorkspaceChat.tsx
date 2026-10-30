@@ -105,6 +105,11 @@ const SUGGESTION_PROMPTS = [
   'Compare building this with PostgreSQL vs MongoDB for our specific requirements.',
 ];
 
+const asStringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String);
+  return typeof value === 'string' && value.trim() ? [value.trim()] : [];
+};
+
 export default function AIWorkspaceChat({
   projectId,
   onBackToPS,
@@ -127,18 +132,27 @@ export default function AIWorkspaceChat({
 
   const [inputMessage, setInputMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+interface ModelOption {
+  id: string;
+  name: string;
+  context_window?: number;
+}
+
   const [chatError, setChatError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<'auth' | 'rate_limit' | 'general' | null>(null);
 
   // Model & Provider state
   const [provider, setProvider] = useState<string>(() => project?.provider || 'groq');
-  const [model, setModel] = useState<string>(() => project?.model || 'openai/gpt-oss-120b');
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [model, setModel] = useState<string>(() => {
+    if (project?.model && project.model !== 'openai/gpt-oss-120b') return project.model;
+    return 'llama-3.3-70b-versatile';
+  });
+  const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // UI state
-  const [isPSDrawerOpen, setIsPSDrawerOpen] = useState(false);
+  const [isPSDrawerOpen, setIsPSDrawerOpen] = useState(() => Boolean(project?.explanation));
   const [isToolsSidebarOpen, setIsToolsSidebarOpen] = useState(false);
   const [activeDeliverableType, setActiveDeliverableType] = useState<DeliverableType | null>(null);
   const [deliverableData, setDeliverableData] = useState<Record<string, any>>(() => {
@@ -164,7 +178,7 @@ export default function AIWorkspaceChat({
       setMessages(p.messages || []);
       setDeliverableData(p.deliverables || {});
       if (p.provider) setProvider(p.provider);
-      if (p.model) setModel(p.model);
+      if (p.model && p.model !== 'openai/gpt-oss-120b') setModel(p.model);
     }
   }, [projectId]);
 
@@ -179,9 +193,15 @@ export default function AIWorkspaceChat({
       if (res.ok) {
         const data = await res.json();
         if (data.models && data.models.length > 0) {
-          setAvailableModels(data.models);
-          if (!data.models.includes(model)) {
-            setModel(data.models[0]);
+          const normalized: ModelOption[] = data.models.map((m: any) =>
+            typeof m === 'string'
+              ? { id: m, name: m }
+              : { id: m.id, name: m.name || m.id, context_window: m.context_window }
+          );
+          setAvailableModels(normalized);
+          const currentValid = normalized.some((m) => m.id === model);
+          if (!currentValid) {
+            setModel(normalized[0].id);
           }
         }
       }
@@ -225,7 +245,7 @@ export default function AIWorkspaceChat({
     }
     if (project.explanation) {
       parts.push(
-        `=== STRUCTURED PS ANALYSIS ===\nOverview: ${project.explanation.overview}\nCore Problem: ${project.explanation.coreProblem}\nStakeholders: ${project.explanation.targetUsers?.join(', ')}\nRequirements: ${project.explanation.requirements?.join('; ')}\nConstraints: ${project.explanation.constraints?.join('; ')}\nSuccess Criteria: ${project.explanation.successCriteria?.join('; ')}`
+        `=== STRUCTURED PS ANALYSIS ===\nOverview: ${project.explanation.overview || project.explanation.overview_objective}\nCore Problem: ${project.explanation.coreProblem || project.explanation.actual_problem}\nStakeholders: ${asStringList(project.explanation.targetUsers || project.explanation.target_users_stakeholders).join(', ')}\nRequirements: ${asStringList(project.explanation.requirements || project.explanation.stated_requirements).join('; ')}\nInferred Recommendations: ${asStringList(project.explanation.inferredRecommendations || project.explanation.inferred_recommendations).join('; ')}\nConstraints: ${asStringList(project.explanation.constraints || project.explanation.constraints_limitations).join('; ')}\nSuccess Criteria: ${asStringList(project.explanation.successCriteria || project.explanation.success_judging_criteria).join('; ')}`
       );
     }
     return parts.join('\n\n');
@@ -674,8 +694,27 @@ export default function AIWorkspaceChat({
             </button>
           </div>
 
-          {/* Right: Model Selector, Settings & Contextual Tools Toggle */}
+          {/* Right: Provider & Model Selector, API Key & Deliverables Toggle */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Provider Selector */}
+            <select
+              value={provider}
+              onChange={(e) => {
+                const p = e.target.value;
+                setProvider(p);
+                fetchModels(p);
+                if (projectId) updateProject(projectId, { provider: p });
+              }}
+              className="bg-white border border-[#E5E1DA] rounded-xl px-2 py-1 text-xs font-mono font-medium text-[#1A1D29] focus:outline-none cursor-pointer shadow-2xs capitalize hidden sm:inline-block"
+            >
+              <option value="groq">Groq</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Claude</option>
+              <option value="gemini">Gemini</option>
+              <option value="moonshot">Moonshot</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
+
             {/* Model Selector Dropdown */}
             <div className="flex items-center gap-1.5 bg-white border border-[#E5E1DA] rounded-xl px-2.5 py-1 shadow-2xs">
               <span className="text-[10px] font-mono text-[#6B7280] uppercase tracking-wider hidden md:inline">
@@ -689,23 +728,24 @@ export default function AIWorkspaceChat({
                   if (projectId) updateProject(projectId, { model: m });
                 }}
                 disabled={isLoadingModels}
-                className="bg-transparent text-xs font-mono font-medium text-[#1A1D29] focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[200px] truncate"
+                className="bg-transparent text-xs font-mono font-medium text-[#1A1D29] focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[190px] truncate"
               >
                 {availableModels.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
+                  <option key={m.id} value={m.id}>
+                    {m.name || m.id}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Provider Settings Button */}
+            {/* Provider Settings & API Key Button */}
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 rounded-xl bg-white hover:bg-[#FAFAF7] border border-[#E5E1DA] text-[#6B7280] hover:text-[#1A1D29] transition-colors cursor-pointer shadow-2xs"
-              title="Configure AI Providers (OpenAI, Claude, Gemini, Groq, Kimi, OpenRouter)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#FAFAF7] border border-[#E5E1DA] text-[#6B7280] hover:text-[#1A1D29] transition-colors cursor-pointer shadow-2xs text-xs font-mono"
+              title="Configure AI Provider API Keys"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5 text-[#E85D2C]" />
+              <span className="hidden md:inline">API Key</span>
             </button>
 
             {/* Contextual Tools Panel Toggle */}
@@ -833,7 +873,9 @@ export default function AIWorkspaceChat({
                     </div>
                     <div className="flex items-center gap-2 p-3 rounded-2xl bg-white border border-[#E5E1DA] shadow-2xs">
                       <Loader2 className="w-4 h-4 animate-spin text-[#E85D2C]" />
-                      <span>Reasoning with {model}...</span>
+                      <span>
+                        Reasoning with {availableModels.find((m) => m.id === model)?.name || model} ({provider.toUpperCase()})...
+                      </span>
                     </div>
                   </div>
                 )}
@@ -1204,7 +1246,7 @@ export default function AIWorkspaceChat({
                       1. Problem Overview & Objective
                     </div>
                     <p className="text-xs font-mono text-[#1A1D29] leading-relaxed">
-                      {project.explanation.overview}
+                      {project.explanation.overview || project.explanation.overview_objective}
                     </p>
                   </div>
 
@@ -1213,7 +1255,7 @@ export default function AIWorkspaceChat({
                       2. Actual Problem to Solve
                     </div>
                     <p className="text-xs font-mono text-[#6B7280] leading-relaxed">
-                      {project.explanation.coreProblem}
+                      {project.explanation.coreProblem || project.explanation.actual_problem}
                     </p>
                   </div>
 
@@ -1222,7 +1264,7 @@ export default function AIWorkspaceChat({
                       3. Target Users & Stakeholders
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      {project.explanation.targetUsers?.map((u, i) => (
+                      {asStringList(project.explanation.targetUsers || project.explanation.target_users_stakeholders).map((u, i) => (
                         <span
                           key={i}
                           className="px-2 py-0.5 rounded-md bg-[#FAFAF7] border border-[#E5E1DA] text-[11px] font-mono text-[#1A1D29]"
@@ -1238,7 +1280,7 @@ export default function AIWorkspaceChat({
                       4. Requirements & Expected Deliverables
                     </div>
                     <ul className="space-y-1.5 mt-2">
-                      {project.explanation.requirements?.map((req, i) => (
+                      {asStringList(project.explanation.requirements || project.explanation.stated_requirements).map((req, i) => (
                         <li key={i} className="text-xs font-mono text-[#6B7280] flex items-start gap-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#E85D2C] mt-1.5 shrink-0" />
                           <span>{req}</span>
@@ -1247,12 +1289,25 @@ export default function AIWorkspaceChat({
                     </ul>
                   </div>
 
+                  <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200">
+                    <div className="text-xs font-bold font-mono text-indigo-950 mb-1">
+                      5. Inferred Recommendations
+                    </div>
+                    <ul className="space-y-1.5 mt-2">
+                      {asStringList(project.explanation.inferredRecommendations || project.explanation.inferred_recommendations).map((recommendation, i) => (
+                        <li key={i} className="text-xs font-mono text-indigo-900 flex items-start gap-2">
+                          <span className="text-indigo-600">→</span><span>{recommendation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
                   <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200">
                     <div className="text-xs font-bold font-mono text-amber-900 mb-1">
-                      5. Constraints & Limitations
+                      6. Constraints & Limitations
                     </div>
                     <ul className="space-y-1 mt-1 text-xs font-mono text-amber-800">
-                      {project.explanation.constraints?.map((c, i) => (
+                      {asStringList(project.explanation.constraints || project.explanation.constraints_limitations).map((c, i) => (
                         <li key={i}>• {c}</li>
                       ))}
                     </ul>
@@ -1260,10 +1315,10 @@ export default function AIWorkspaceChat({
 
                   <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200">
                     <div className="text-xs font-bold font-mono text-emerald-900 mb-1">
-                      6. Success / Judging Criteria
+                      7. Success / Judging Criteria
                     </div>
                     <ul className="space-y-1 mt-1 text-xs font-mono text-emerald-800">
-                      {project.explanation.successCriteria?.map((sc, i) => (
+                      {asStringList(project.explanation.successCriteria || project.explanation.success_judging_criteria).map((sc, i) => (
                         <li key={i}>• {sc}</li>
                       ))}
                     </ul>
@@ -1272,13 +1327,16 @@ export default function AIWorkspaceChat({
                   {project.explanation.importantTerms && project.explanation.importantTerms.length > 0 && (
                     <div className="p-4 rounded-xl bg-white border border-[#E5E1DA]">
                       <div className="text-xs font-bold font-mono text-[#1A1D29] mb-1">
-                        7. Important Terms & Clarifications
+                        8. Important Terms & Clarifications
                       </div>
                       <div className="space-y-1.5 mt-2">
-                        {project.explanation.importantTerms.map((t, i) => (
+                        {project.explanation.importantTerms.map((t: any, i) => (
                           <div key={i} className="text-xs font-mono">
-                            <span className="font-bold text-[#1A1D29]">{t.term}: </span>
-                            <span className="text-[#6B7280]">{t.explanation}</span>
+                            {typeof t === 'string' ? (
+                              <span className="text-[#6B7280]">{t}</span>
+                            ) : (
+                              <><span className="font-bold text-[#1A1D29]">{t.term}: </span><span className="text-[#6B7280]">{t.explanation}</span></>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1307,7 +1365,7 @@ export default function AIWorkspaceChat({
         onClose={() => setIsSettingsOpen(false)}
         activeProvider={provider}
         activeModel={model}
-        onSelectProvider={(p, m) => {
+        onSelectProviderModel={(p, m) => {
           setProvider(p);
           setModel(m);
           if (projectId) {

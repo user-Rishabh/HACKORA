@@ -1,8 +1,13 @@
 import os
 import hashlib
 import time
+import io
+import re
+import zlib
+import zipfile
+import xml.etree.ElementTree as ET
 from typing import Optional, Union
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 
 from app.ingestion.clone import clone_repo, validate_github_url
@@ -955,6 +960,92 @@ def stream_multiprovider_chat(req: MultiProviderChatRequest):
         return StreamingResponse(generator, media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stage1/extract-document")
+async def api_extract_document(file: UploadFile = File(...)):
+    """
+    Extracts readable plain text from uploaded PDF, DOCX, TXT, MD, CSV, or JSON documents.
+    Filters out raw binary streams and provides clean text for analysis.
+    """
+    filename = file.filename or "document.txt"
+    content_bytes = await file.read()
+    
+    # 1. Plain text / Markdown / JSON / CSV
+    if any(filename.lower().endswith(ext) for ext in [".txt", ".md", ".json", ".csv", ".yaml", ".yml"]):
+        try:
+            text = content_bytes.decode("utf-8")
+        except Exception:
+            text = content_bytes.decode("latin-1", errors="ignore")
+        return {"text": text.strip(), "filename": filename, "word_count": len(text.split())}
+
+    # 2. DOCX extraction via XML
+    if filename.lower().endswith(".docx"):
+        try:
+            with zipfile.ZipFile(io.BytesIO(content_bytes)) as z:
+                xml_content = z.read("word/document.xml")
+                tree = ET.fromstring(xml_content)
+                texts = [node.text for node in tree.iter() if node.tag.endswith("}t") and node.text]
+                extracted = " ".join(texts).strip()
+                if extracted:
+                    return {"text": extracted, "filename": filename, "word_count": len(extracted.split())}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to parse DOCX file: {str(e)}")
+
+    # 3. PDF extraction
+    if filename.lower().endswith(".pdf"):
+        # Try pypdf if available
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(content_bytes))
+            pages_text = [page.extract_text() or "" for page in reader.pages]
+            full_text = "\n\n".join(p for p in pages_text if p.strip()).strip()
+            if full_text:
+                return {"text": full_text, "filename": filename, "word_count": len(full_text.split())}
+        except Exception:
+            pass
+
+        # Native stream decompression fallback (extract FlateDecode text)
+        try:
+            stream_pattern = re.compile(b"stream\r?\n(.*?)\r?\nendstream", re.DOTALL)
+            text_pieces = []
+            for match in stream_pattern.finditer(content_bytes):
+                raw_data = match.group(1)
+                try:
+                    decompressed = zlib.decompress(raw_data)
+                    matches = re.findall(rb"\((.*?)\)\s*T[jJ]", decompressed)
+                    for m in matches:
+                        try:
+                            clean_t = m.decode("utf-8", errors="ignore").strip()
+                            if len(clean_t) > 1 and not clean_t.startswith("/"):
+                                text_pieces.append(clean_t)
+                        except Exception:
+                            pass
+                except Exception:
+                    continue
+            
+            extracted = " ".join(text_pieces).strip()
+            if len(extracted.split()) >= 15:
+                return {"text": extracted, "filename": filename, "word_count": len(extracted.split())}
+        except Exception:
+            pass
+
+        raise HTTPException(
+            status_code=422,
+            detail=f"Could not extract readable text from binary PDF '{filename}'. Please copy and paste the problem statement text directly in the 'Paste Text' tab."
+        )
+
+    # Fallback decode
+    try:
+        decoded = content_bytes.decode("utf-8")
+        if "\x00" in decoded or decoded.startswith("%PDF"):
+            raise ValueError("Binary stream detected")
+        return {"text": decoded.strip(), "filename": filename, "word_count": len(decoded.split())}
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Binary or unsupported format for '{filename}'. Please paste the problem statement text directly."
+        )
 
 
 @router.post("/stage1/explain-ps")

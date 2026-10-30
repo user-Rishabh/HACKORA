@@ -11,14 +11,12 @@ PROVIDER_CATALOG = {
         "name": "Groq",
         "description": "Ultra-fast LPU inference hosting open models",
         "key_env_var": "GROQ_API_KEY",
-        "default_model": "openai/gpt-oss-120b",
+        "default_model": "llama-3.3-70b-versatile",
         "models": [
-            {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B (Groq Hosted)", "context_window": 8192},
-            {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B (Groq Hosted)", "context_window": 8192},
             {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B Versatile", "context_window": 128000},
             {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant", "context_window": 128000},
-            {"id": "qwen/qwen3.6-27b", "name": "Qwen 3.6 27B", "context_window": 32768},
             {"id": "mixtral-8x7b-32768", "name": "Mixtral 8x7B", "context_window": 32768},
+            {"id": "gemma2-9b-it", "name": "Gemma 2 9B IT", "context_window": 8192},
         ],
     },
     "openai": {

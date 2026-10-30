@@ -10,8 +10,9 @@ import {
   Cpu,
   RefreshCw,
   ExternalLink,
-  ChevronRight,
-  Info
+  Eye,
+  EyeOff,
+  Zap,
 } from 'lucide-react';
 import { API_BASE_URL } from '../lib/apiClient';
 import {
@@ -37,6 +38,39 @@ interface ProviderMeta {
   models: { id: string; name: string; context_window?: number }[];
 }
 
+const PROVIDER_PORTALS: Record<string, { url: string; label: string; prefixHint: string }> = {
+  groq: {
+    url: 'https://console.groq.com/keys',
+    label: 'console.groq.com/keys',
+    prefixHint: 'Starts with gsk_...',
+  },
+  openai: {
+    url: 'https://platform.openai.com/api-keys',
+    label: 'platform.openai.com/api-keys',
+    prefixHint: 'Starts with sk-... or sk-proj-...',
+  },
+  anthropic: {
+    url: 'https://console.anthropic.com/settings/keys',
+    label: 'console.anthropic.com/settings/keys',
+    prefixHint: 'Starts with sk-ant-...',
+  },
+  gemini: {
+    url: 'https://aistudio.google.com/app/apikey',
+    label: 'aistudio.google.com/app/apikey',
+    prefixHint: 'Starts with AIzaSy...',
+  },
+  moonshot: {
+    url: 'https://platform.moonshot.cn/console/api-keys',
+    label: 'platform.moonshot.cn/console',
+    prefixHint: 'Starts with sk-...',
+  },
+  openrouter: {
+    url: 'https://openrouter.ai/keys',
+    label: 'openrouter.ai/keys',
+    prefixHint: 'Starts with sk-or-...',
+  },
+};
+
 export default function ProviderSettingsModal({
   isOpen,
   onClose,
@@ -48,6 +82,7 @@ export default function ProviderSettingsModal({
   const [selectedProviderId, setSelectedProviderId] = useState<string>(activeProvider || 'groq');
   const [apiKeyInput, setApiKeyInput] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>(activeModel || '');
+  const [showApiKey, setShowApiKey] = useState<boolean>(false);
 
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; message: string } | null>(null);
@@ -81,8 +116,14 @@ export default function ProviderSettingsModal({
 
   useEffect(() => {
     const p = providers.find((pr) => pr.id === selectedProviderId);
-    if (p && !selectedModel) {
-      setSelectedModel(p.default_model);
+    if (p) {
+      const saved = getSavedCredentials();
+      const cred = saved[selectedProviderId];
+      if (cred?.defaultModel) {
+        setSelectedModel(cred.defaultModel);
+      } else if (!selectedModel || !p.models.some((m) => m.id === selectedModel)) {
+        setSelectedModel(p.default_model);
+      }
     }
   }, [selectedProviderId, providers]);
 
@@ -97,11 +138,17 @@ export default function ProviderSettingsModal({
     models: [],
   };
 
+  const portalInfo = PROVIDER_PORTALS[selectedProviderId] || {
+    url: '#',
+    label: 'Provider Portal',
+    prefixHint: '',
+  };
+
   const handleValidateKey = async () => {
     if (!apiKeyInput.trim() && !currentProvider.has_server_key) {
       setValidationResult({
         valid: false,
-        message: 'Please enter an API key or use a provider with pre-configured server keys.',
+        message: `Please enter your ${currentProvider.name} API key below.`,
       });
       return;
     }
@@ -157,36 +204,36 @@ export default function ProviderSettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#1A1D29]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border border-[#E5E1DA] shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden max-h-[90vh] animate-fade-in">
+      <div className="bg-white rounded-2xl border border-[#E5E1DA] shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden max-h-[92vh] animate-fade-in">
         {/* Modal Header */}
-        <div className="p-5 border-b border-[#E5E1DA] flex items-center justify-between">
+        <div className="p-5 border-b border-[#E5E1DA] flex items-center justify-between bg-[#FAFAF7]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#E85D2C]/10 border border-[#E85D2C]/20 flex items-center justify-center text-[#E85D2C]">
               <KeyRound className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-display font-bold text-base text-[#1A1D29]">
-                AI Provider & Model Settings
+                AI Provider & API Key Settings
               </h3>
               <p className="text-[11px] font-mono text-[#6B7280]">
-                Configure multi-provider models for grounded reasoning and planning.
+                Configure provider credentials to unlock model reasoning and streaming.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-[#E5E1DA] text-[#6B7280] hover:text-[#1A1D29] hover:bg-[#FAFAF7] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg border border-[#E5E1DA] text-[#6B7280] hover:text-[#1A1D29] hover:bg-white transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Body: Left provider selector + Right config */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-12 min-h-[380px]">
-          {/* Provider List Sidebar (5 cols) */}
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-12 min-h-[400px]">
+          {/* Provider List Sidebar (4 cols) */}
           <div className="md:col-span-4 border-r border-[#E5E1DA] p-3 flex flex-col gap-1.5 bg-[#FAFAF7]/60">
             <span className="text-[10px] font-mono uppercase font-bold text-[#6B7280] px-2 py-1">
-              Supported Providers
+              Select Provider
             </span>
             {providers.map((p) => {
               const isSelected = p.id === selectedProviderId;
@@ -196,7 +243,6 @@ export default function ProviderSettingsModal({
                   key={p.id}
                   onClick={() => {
                     setSelectedProviderId(p.id);
-                    setSelectedModel(p.default_model);
                   }}
                   className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                     isSelected
@@ -221,53 +267,76 @@ export default function ProviderSettingsModal({
           {/* Provider Configuration Panel (8 cols) */}
           <div className="md:col-span-8 p-5 flex flex-col justify-between gap-4">
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-[#E5E1DA] pb-2.5">
+                <div>
                   <h4 className="font-display font-bold text-sm text-[#1A1D29]">
-                    {currentProvider.name} Configuration
+                    {currentProvider.name} Credentials
                   </h4>
-                  {currentProvider.has_server_key && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-                      Server Key Ready
-                    </span>
-                  )}
+                  <p className="text-xs font-mono text-[#6B7280]">
+                    {currentProvider.description}
+                  </p>
                 </div>
-                <p className="text-xs font-mono text-[#6B7280] mt-0.5">
-                  {currentProvider.description}
-                </p>
+                {currentProvider.has_server_key && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shrink-0">
+                    Server Key Ready
+                  </span>
+                )}
               </div>
 
-              {/* API Key Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-mono font-bold text-[#1A1D29] flex items-center justify-between">
-                  <span>API Key</span>
-                  {currentProvider.has_server_key && !apiKeyInput && (
-                    <span className="text-[10px] font-normal text-[#6B7280]">
-                      (Using configured server default key)
-                    </span>
-                  )}
-                </label>
+              {/* API Key Input Section with Prompt */}
+              <div className="space-y-2 p-3.5 rounded-xl bg-[#FFF4EE]/40 border border-[#E85D2C]/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono font-bold text-[#1A1D29] flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-[#E85D2C]" />
+                    <span>Enter your {currentProvider.name} API Key</span>
+                  </label>
+                  <a
+                    href={portalInfo.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] font-mono text-[#E85D2C] hover:underline flex items-center gap-1"
+                  >
+                    <span>Get Key</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showApiKey ? 'text' : 'password'}
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     placeholder={
                       currentProvider.has_server_key
-                        ? '•••••••••••••••• (Server key active, enter custom key to override)'
-                        : `Enter your ${currentProvider.name} API key...`
+                        ? 'System key active. Paste custom key here to override...'
+                        : `Paste your ${currentProvider.name} API key (${portalInfo.prefixHint})...`
                     }
-                    className="w-full p-2.5 rounded-xl border border-[#E5E1DA] bg-white text-xs font-mono text-[#1A1D29] focus:outline-none focus:border-[#E85D2C] pr-10"
+                    className="w-full p-2.5 rounded-xl border border-[#E5E1DA] bg-white text-xs font-mono text-[#1A1D29] focus:outline-none focus:border-[#E85D2C] pr-16"
                   />
-                  {apiKeyInput && (
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <button
-                      onClick={handleRemoveKey}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-red-600 transition-colors cursor-pointer"
-                      title="Clear credential"
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="p-1 text-[#6B7280] hover:text-[#1A1D29] transition-colors cursor-pointer"
+                      title={showApiKey ? 'Hide key' : 'Show key'}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
-                  )}
+                    {apiKeyInput && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveKey}
+                        className="p-1 text-[#6B7280] hover:text-red-600 transition-colors cursor-pointer"
+                        title="Clear key"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-[10px] font-mono text-[#6B7280]">
+                  Get your key at: <span className="text-[#1A1D29] font-semibold">{portalInfo.label}</span>
                 </div>
               </div>
 
@@ -293,12 +362,12 @@ export default function ProviderSettingsModal({
               <div className="space-y-1.5">
                 <label className="text-xs font-mono font-bold text-[#1A1D29] flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-[#3B5FE0]" />
-                  <span>Selected Model</span>
+                  <span>Choose Model for {currentProvider.name}</span>
                 </label>
                 <select
                   value={selectedModel || currentProvider.default_model}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#E5E1DA] bg-white text-xs font-mono text-[#1A1D29] focus:outline-none focus:border-[#E85D2C]"
+                  className="w-full p-2.5 rounded-xl border border-[#E5E1DA] bg-white text-xs font-mono text-[#1A1D29] focus:outline-none focus:border-[#E85D2C] cursor-pointer"
                 >
                   {currentProvider.models?.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -309,10 +378,10 @@ export default function ProviderSettingsModal({
               </div>
 
               {/* Security Callout */}
-              <div className="p-3 rounded-xl bg-[#FAFAF7] border border-[#E5E1DA] text-[11px] font-mono text-[#6B7280] flex items-start gap-2">
+              <div className="p-3 rounded-xl bg-[#FAFAF7] border border-[#E5E1DA] text-[10px] font-mono text-[#6B7280] flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#059669] shrink-0 mt-0.5" />
                 <span>
-                  Keys are stored exclusively in your browser session for direct backend mediation and are never logged, committed to source, or exposed in public responses.
+                  Keys are stored exclusively in your browser session storage for backend-mediated requests. Keys are never logged or committed to source control.
                 </span>
               </div>
             </div>
@@ -328,12 +397,12 @@ export default function ProviderSettingsModal({
                 {isValidating ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Verifying...</span>
+                    <span>Validating Key...</span>
                   </>
                 ) : (
                   <>
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Test Connection</span>
+                    <span>Test Key Connection</span>
                   </>
                 )}
               </button>
@@ -351,7 +420,7 @@ export default function ProviderSettingsModal({
                   onClick={handleSaveAndApply}
                   className="px-4 py-2 rounded-xl bg-[#E85D2C] hover:bg-[#D45022] text-white text-xs font-mono font-semibold transition-all shadow-xs cursor-pointer"
                 >
-                  Apply & Select
+                  Save & Apply
                 </button>
               </div>
             </div>
