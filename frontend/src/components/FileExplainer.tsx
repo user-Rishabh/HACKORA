@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { 
-  FileText, 
-  Cpu, 
-  Database, 
-  AlertTriangle, 
+import {
+  FileText,
+  Cpu,
+  Database,
+  AlertTriangle,
   Loader2,
   X,
   Zap,
@@ -36,12 +36,12 @@ interface FileExplainerProps {
   onSelectFile?: (filePath: string) => void;
 }
 
-export default function FileExplainer({ 
-  repoId, 
-  filePath, 
-  onClose, 
+export default function FileExplainer({
+  repoId,
+  filePath,
+  onClose,
   onLoadingStateChange,
-  onSelectFile 
+  onSelectFile
 }: FileExplainerProps) {
   const [activeTab, setActiveTab] = useState<'summary' | 'blast_radius'>('summary');
 
@@ -60,12 +60,12 @@ export default function FileExplainer({
   const [loadingBlast, setLoadingBlast] = useState(false);
   const [blastData, setBlastData] = useState<BlastRadiusData | null>(null);
   const [blastError, setBlastError] = useState<string | null>(null);
-  
+
   const loadingRef = useRef('');
 
   useEffect(() => {
     if (!repoId || !filePath) return;
-    
+
     if (loadingRef.current === filePath) {
       return;
     }
@@ -86,9 +86,9 @@ export default function FileExplainer({
       setConnections(null);
       setBlastData(null);
       setSecretsRedacted(false);
-      
+
       const encodedPath = encodeURIComponent(filePath);
-      
+
       // Parallel fetches for summary and blast radius
       try {
         const [summaryRes, blastRes] = await Promise.all([
@@ -140,7 +140,7 @@ export default function FileExplainer({
     setKeyParts(null);
     setConnections(null);
     if (onLoadingStateChange) onLoadingStateChange(true);
-    
+
     const encodedPath = encodeURIComponent(filePath);
     try {
       const res = await fetch(`${API_BASE_URL}/api/files/explain?repo_id=${repoId}&file_path=${encodedPath}&force_regenerate=true`);
@@ -194,8 +194,8 @@ export default function FileExplainer({
   }
 
   const isStructured = Boolean(
-    displayPurpose || 
-    (displayKeyParts && (Array.isArray(displayKeyParts) ? displayKeyParts.length > 0 : Boolean(displayKeyParts))) || 
+    displayPurpose ||
+    (displayKeyParts && (Array.isArray(displayKeyParts) ? displayKeyParts.length > 0 : Boolean(displayKeyParts))) ||
     displayConnections
   );
 
@@ -204,7 +204,7 @@ export default function FileExplainer({
     <div className="bg-white border border-[#E5E1DA] p-6 rounded-2xl flex flex-col h-full relative overflow-hidden shadow-xs">
       {/* Close button */}
       {onClose && (
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg border border-[#E5E1DA] hover:border-[#E85D2C]/40 bg-white hover:bg-[#FAFAF7] text-[#6B7280] hover:text-[#1A1D29] transition-all duration-150 cursor-pointer z-10"
         >
@@ -221,7 +221,7 @@ export default function FileExplainer({
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-[#E85D2C] font-mono font-semibold uppercase tracking-wider">File Analyzer</span>
             {secretsRedacted && (
-              <span 
+              <span
                 className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[9px] font-semibold animate-pulse select-none cursor-help"
                 title="Potential secrets were detected and redacted before AI analysis for your safety"
               >
@@ -239,34 +239,31 @@ export default function FileExplainer({
 
       {/* Tab Selector */}
       <div className="flex gap-4 mb-4 border-b border-[#E5E1DA] pb-2 select-none">
-        <button 
+        <button
           onClick={() => setActiveTab('summary')}
-          className={`pb-1.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'summary' 
-              ? 'border-[#E85D2C] text-[#E85D2C]' 
-              : 'border-transparent text-[#6B7280] hover:text-[#1A1D29]'
-          }`}
+          className={`pb-1.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'summary'
+            ? 'border-[#E85D2C] text-[#E85D2C]'
+            : 'border-transparent text-[#6B7280] hover:text-[#1A1D29]'
+            }`}
         >
           <FileText className="w-3.5 h-3.5" />
           AI Summary
         </button>
 
-        <button 
+        <button
           onClick={() => setActiveTab('blast_radius')}
-          className={`pb-1.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'blast_radius' 
-              ? 'border-[#E85D2C] text-[#E85D2C]' 
-              : 'border-transparent text-[#6B7280] hover:text-[#1A1D29]'
-          }`}
+          className={`pb-1.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'blast_radius'
+            ? 'border-[#E85D2C] text-[#E85D2C]'
+            : 'border-transparent text-[#6B7280] hover:text-[#1A1D29]'
+            }`}
         >
           <Zap className="w-3.5 h-3.5 text-[#E85D2C]" />
           What Depends On This
           {blastData && (
-            <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-              blastData.total_affected_count > 0 
-                ? 'bg-amber-50 text-amber-800 border border-amber-200' 
-                : 'bg-[#FAFAF7] text-[#6B7280] border border-[#E5E1DA]'
-            }`}>
+            <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono ${blastData.total_affected_count > 0
+              ? 'bg-amber-50 text-amber-800 border border-amber-200'
+              : 'bg-[#FAFAF7] text-[#6B7280] border border-[#E5E1DA]'
+              }`}>
               {blastData.total_affected_count}
             </span>
           )}
@@ -275,7 +272,7 @@ export default function FileExplainer({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-[30vh] overflow-y-auto">
-        
+
         {/* TAB 1: AI SUMMARY */}
         {activeTab === 'summary' && (
           <div className="flex-1 flex flex-col">
@@ -427,29 +424,27 @@ export default function FileExplainer({
 
             {!loadingBlast && !blastError && blastData && (
               <div className="flex-1 flex flex-col gap-5">
-                
+
                 {/* Blast Radius Stat Banner */}
-                <div className={`p-4 rounded-xl border flex items-center gap-4 ${
-                  blastData.total_affected_count > 0 
-                    ? 'bg-amber-50 border-amber-200 text-amber-900' 
-                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                }`}>
-                  <div className={`p-3 rounded-xl shrink-0 ${
-                    blastData.total_affected_count > 0 
-                      ? 'bg-amber-100 text-amber-700 border border-amber-200' 
-                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                <div className={`p-4 rounded-xl border flex items-center gap-4 ${blastData.total_affected_count > 0
+                  ? 'bg-amber-50 border-amber-200 text-amber-900'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                   }`}>
+                  <div className={`p-3 rounded-xl shrink-0 ${blastData.total_affected_count > 0
+                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    }`}>
                     {blastData.total_affected_count > 0 ? <Zap className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
                   </div>
                   <div>
                     <h4 className="font-bold text-sm">
-                      {blastData.total_affected_count > 0 
-                        ? `${blastData.total_affected_count} ${blastData.total_affected_count === 1 ? 'file' : 'files'} depend on this` 
+                      {blastData.total_affected_count > 0
+                        ? `${blastData.total_affected_count} ${blastData.total_affected_count === 1 ? 'file' : 'files'} depend on this`
                         : 'No other files import this one'}
                     </h4>
                     <p className="text-xs mt-0.5 text-[#6B7280]">
-                      {blastData.total_affected_count > 0 
-                        ? 'Modifying interfaces in this file will impact the downstream files listed below.' 
+                      {blastData.total_affected_count > 0
+                        ? 'Modifying interfaces in this file will impact the downstream files listed below.'
                         : 'This file is a leaf module or top-level entry point. Changing it carries low risk of breaking other files.'}
                     </p>
                   </div>
@@ -504,7 +499,7 @@ export default function FileExplainer({
                     </h5>
                     <div className="flex flex-col gap-2">
                       {blastData.transitive_dependents.map((transDep, idx) => (
-                        <div 
+                        <div
                           key={`${transDep.file_path}-${idx}`}
                           className="p-3 rounded-xl bg-[#FAFAF7] border border-[#E5E1DA] hover:border-[#E85D2C]/40 transition-all flex flex-col gap-2"
                         >
@@ -532,13 +527,12 @@ export default function FileExplainer({
                             {transDep.path.map((node, i) => (
                               <React.Fragment key={i}>
                                 {i > 0 && <ArrowRight className="w-2.5 h-2.5 text-[#E85D2C] shrink-0" />}
-                                <span className={`px-1.5 py-0.5 rounded ${
-                                  i === 0 
-                                    ? 'bg-amber-50 text-amber-800 border border-amber-200 font-bold' 
-                                    : i === transDep.path.length - 1 
-                                      ? 'bg-orange-50 text-orange-800 border border-orange-200 font-bold' 
-                                      : 'bg-[#FAFAF7] text-[#1A1D29] border border-[#E5E1DA]'
-                                }`}>
+                                <span className={`px-1.5 py-0.5 rounded ${i === 0
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200 font-bold'
+                                  : i === transDep.path.length - 1
+                                    ? 'bg-orange-50 text-orange-800 border border-orange-200 font-bold'
+                                    : 'bg-[#FAFAF7] text-[#1A1D29] border border-[#E5E1DA]'
+                                  }`}>
                                   {node.split('/').pop() || node}
                                 </span>
                               </React.Fragment>
