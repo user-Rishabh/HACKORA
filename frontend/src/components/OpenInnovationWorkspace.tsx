@@ -70,7 +70,7 @@ export default function OpenInnovationWorkspace({
       setInnovationAnalysis({ ...data, incumbents: data.incumbents || data.existing_solutions || [] });
     } catch (err: any) {
       console.error(err);
-      setInnovationError(err.message || 'Error communicating with DevLens AI backend.');
+      setInnovationError(err.message || 'Error communicating with HACKORA backend.');
     } finally {
       setIsExploringInnovation(false);
     }

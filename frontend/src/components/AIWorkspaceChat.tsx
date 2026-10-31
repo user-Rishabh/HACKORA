@@ -493,24 +493,24 @@ export default function AIWorkspaceChat({
               : { id: m.id, name: m.name || m.id, context_window: m.context_window, provider: prov }
           );
           setAvailableModels(list);
-          const hasValid = list.some((m) => m.id === model);
-          if (!hasValid && list.length > 0) {
-            setModel(list[0].id);
-          }
+          setModel((currentModel) => {
+            const hasValid = list.some((m) => m.id === currentModel);
+            return hasValid ? currentModel : list[0].id;
+          });
         }
       }
     } catch {
       // ignore
     }
-  }, [model]);
+  }, []);
 
   useEffect(() => {
     fetchModels(provider);
   }, [provider, fetchModels]);
 
-  // Scroll bottom
+  // Scroll bottom (auto during streaming to prevent animation lag, smooth on completion)
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatBottomRef.current?.scrollIntoView({ behavior: isGenerating ? 'auto' : 'smooth' });
   }, [messages, isGenerating]);
 
   // Auto-resize composer textarea
@@ -708,7 +708,7 @@ export default function AIWorkspaceChat({
     const autoTitle =
       messages.length === 0
         ? currentAttachments[0]?.name || textToSend.slice(0, 40).replace(/[\r\n]+/g, ' ') || 'New Conversation'
-        : project?.title || 'DevLens AI Chat';
+        : project?.title || 'HACKORA Chat';
 
     // Deduplicate attached files by name
     const existingFileNames = new Set((project?.attachedFiles || []).map((f) => f.name));
@@ -723,7 +723,7 @@ export default function AIWorkspaceChat({
 
     const cred = getProviderCredential(provider);
     if (!cred?.apiKey) {
-      setChatError(`Please enter your ${provider.toUpperCase()} API key in Provider Settings before sending a message. DevLens AI connects to the AI provider only when you use the chat.`);
+      setChatError(`Please enter your ${provider.toUpperCase()} API key in Provider Settings before sending a message. HACKORA connects to the AI provider only when you use the chat.`);
       setIsSettingsOpen(true);
       return;
     }
@@ -821,7 +821,7 @@ export default function AIWorkspaceChat({
           messages: updatedMessages.slice(-6).map((m) => ({ role: m.role, content: m.content.slice(0, 2000) })),
           context: getContextString(),
           system_prompt:
-            'You are DevLens AI, an elite hackathon mentor and technical architect. Converse naturally like ChatGPT and Claude. Format all responses in clean, rich GitHub Markdown using clear headings (## and ###), bullet points, and code blocks. Never output raw JSON dictionaries or robotic code objects unless specifically asked.',
+            'You are HACKORA, an elite hackathon mentor and technical architect. Converse naturally like ChatGPT and Claude. Format all responses in clean, rich GitHub Markdown using clear headings (## and ###), bullet points, and code blocks. Never output raw JSON dictionaries or robotic code objects unless specifically asked.',
           api_key: cred?.apiKey,
         }),
         signal: controller.signal,
@@ -981,7 +981,7 @@ export default function AIWorkspaceChat({
         },
         body: JSON.stringify({
           deliverable_type: type,
-          context: contextStr || 'DevLens AI Hackathon Project',
+          context: contextStr || 'HACKORA Hackathon Project',
           conversation_notes: conversationNotes,
           provider,
           model,
@@ -1009,15 +1009,17 @@ export default function AIWorkspaceChat({
   };
 
   // Render formatted markdown inside chat bubbles using custom high-fidelity MarkdownRenderer
-  const renderMessageContent = (content: string) => {
+  const renderMermaidCallback = useCallback((code: string) => <MermaidViewer code={code} />, []);
+
+  const renderMessageContent = useCallback((content: string) => {
     const formattedContent = formatJsonToMarkdown(content);
     return (
       <MarkdownRenderer
         content={formattedContent}
-        renderMermaid={(code) => <MermaidViewer code={code} />}
+        renderMermaid={renderMermaidCallback}
       />
     );
-  };
+  }, [renderMermaidCallback]);
 
   return (
     <div className="flex h-screen bg-[#FDFCFB] overflow-hidden font-sans antialiased text-[#1A1D29]">
@@ -1031,11 +1033,11 @@ export default function AIWorkspaceChat({
         <div className="p-3.5 border-b border-[#E5E1DA] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-[#E85D2C] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-              DL
+              H
             </div>
             <div>
               <span className="font-display font-bold text-xs tracking-tight text-[#1A1D29] block">
-                DevLens AI
+                HACKORA
               </span>
               <span className="text-[10px] font-mono text-[#E85D2C] block">Stage 1: Explore</span>
             </div>
@@ -1191,7 +1193,7 @@ export default function AIWorkspaceChat({
 
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-[#1A1D29] truncate max-w-[200px] sm:max-w-md">
-                {project?.title || 'DevLens AI Workspace'}
+                {project?.title || 'HACKORA Workspace'}
               </span>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold bg-[#E85D2C]/10 text-[#E85D2C]">
                 {workspaceMode === 'problem_statement' ? 'Problem Statement' : 'Open Innovation'}
@@ -1297,7 +1299,7 @@ export default function AIWorkspaceChat({
               <div className="space-y-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-[#E85D2C]/10 text-[#E85D2C] font-bold border border-[#E85D2C]/20">
                   <Sparkles className="w-3.5 h-3.5" />
-                  DevLens AI — Stage 1: Explore & Plan
+                  HACKORA — Stage 1: Explore & Plan
                 </span>
                 <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#1A1D29] tracking-tight">
                   What are we building today?
@@ -1363,7 +1365,7 @@ export default function AIWorkspaceChat({
                   >
                     {!isUser && (
                       <div className="w-7 h-7 rounded-lg bg-[#E85D2C] text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 shadow-xs">
-                        DL
+                        H
                       </div>
                     )}
 
@@ -1433,11 +1435,11 @@ export default function AIWorkspaceChat({
               {isGenerating && (
                 <div className="flex gap-3 justify-start items-center text-xs font-mono text-[#6B7280]">
                   <div className="w-7 h-7 rounded-lg bg-[#E85D2C] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                    DL
+                    H
                   </div>
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#E5E1DA]">
                     <Loader2 className="w-3.5 h-3.5 text-[#E85D2C] animate-spin" />
-                    <span>DevLens AI is reasoning and formatting...</span>
+                    <span>HACKORA is reasoning and formatting...</span>
                     <button
                       onClick={handleStop}
                       className="ml-2 px-2 py-0.5 rounded text-[10px] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer"

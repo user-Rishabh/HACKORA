@@ -210,7 +210,7 @@ interface ModelOption {
           body: formData,
         });
       } catch {
-        throw new Error(`Cannot reach the DevLens backend at ${API_BASE_URL}. Start the backend or set VITE_API_BASE_URL to its deployed URL, then try again.`);
+        throw new Error(`Cannot reach the HACKORA backend at ${API_BASE_URL}. Start the backend or set VITE_API_BASE_URL to its deployed URL, then try again.`);
       }
 
       if (!response.ok) {
@@ -257,7 +257,7 @@ interface ModelOption {
           }),
         });
       } catch {
-        throw new Error(`Cannot reach the DevLens backend at ${API_BASE_URL}. Start the backend or set VITE_API_BASE_URL to its deployed URL, then try again.`);
+        throw new Error(`Cannot reach the HACKORA backend at ${API_BASE_URL}. Start the backend or set VITE_API_BASE_URL to its deployed URL, then try again.`);
       }
 
       if (!response.ok) {
@@ -292,7 +292,7 @@ interface ModelOption {
       }
     } catch (err: any) {
       console.error(err);
-      setPsError(err.message || 'Error communicating with DevLens AI backend.');
+      setPsError(err.message || 'Error communicating with HACKORA backend.');
     } finally {
       setIsAnalyzingPS(false);
     }
@@ -413,7 +413,7 @@ interface ModelOption {
             Submit & Structure Your Problem Statement
           </h1>
           <p className="text-xs sm:text-sm font-mono text-[#6B7280] mt-1.5 max-w-2xl leading-relaxed">
-            Upload your challenge brief or paste text. DevLens AI extracts facts, isolates constraints, and builds a grounded forensic breakdown before taking you to your conversational planning workspace.
+            Upload your challenge brief or paste text. HACKORA extracts facts, isolates constraints, and builds a grounded forensic breakdown before taking you to your conversational planning workspace.
           </p>
         </div>
 

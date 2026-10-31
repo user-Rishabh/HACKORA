@@ -1,24 +1,24 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a2b4a,100:6d28d9&height=220&section=header&text=DevLens%20AI&fontSize=60&fontColor=ffffff&fontAlignY=35&desc=Google%20Maps%20for%20Codebases&descAlignY=55&descSize=18&animation=fadeIn" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a2b4a,100:e85d2c&height=220&section=header&text=HACKORA&fontSize=64&fontColor=ffffff&fontAlignY=35&desc=From%20Ideas%20to%20Innovation%20—%20AI-Powered%20Hackathon%20Companion&descAlignY=55&descSize=18&animation=fadeIn" width="100%"/>
 
 <br/>
 
 <a href="#">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=3000&pause=1000&color=8B5CF6&center=true&vCenter=true&width=650&lines=Paste+a+GitHub+repo.+Understand+it+instantly.;AST-aware+chunking+%2B+hybrid+semantic+search;Git-history+hotspot+detection+%2B+AI+explanations;Ask+your+codebase+questions+in+plain+English." alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=3000&pause=1000&color=E85D2C&center=true&vCenter=true&width=700&lines=From+Ideas+to+Innovation.;Stage+1%3A+Explore+%26+Plan+with+Multi-LLM+BYOK;Stage+2%3A+Analyze+%26+Defend+Your+Codebase;Judge-ready+architectures%2C+diagrams%2C+and+blueprints." alt="Typing SVG" />
 </a>
 
 <br/><br/>
 
 <img src="https://img.shields.io/badge/status-live-10b981?style=for-the-badge&labelColor=1a2b4a"/>
-<img src="https://img.shields.io/badge/phases-complete-2563eb?style=for-the-badge&labelColor=1a2b4a"/>
+<img src="https://img.shields.io/badge/stage-1%20%26%202%20ready-e85d2c?style=for-the-badge&labelColor=1a2b4a"/>
 <img src="https://img.shields.io/badge/license-MIT-8B5CF6?style=for-the-badge&labelColor=1a2b4a"/>
 
 <br/><br/>
 
 ### 🔗 [**Live Demo**](https://dev-lens-ai-sage.vercel.app) &nbsp;·&nbsp; [**GitHub Repo**](https://github.com/<user-Rishabh>/DevLens-AI)
 
-<sub>Hosted on Render's free tier — the backend sleeps after inactivity, so the first request after a while may take 30–60s to wake up.</sub>
+<sub>Hosted on Render & Vercel — backend sleeps after inactivity; initial cold-start may take 30–45s.</sub>
 
 <br/>
 
@@ -28,33 +28,46 @@
 
 <br/>
 
-## What is DevLens AI?
+## What is HACKORA?
 
-DevLens AI is a **codebase intelligence platform**. Paste any GitHub repository URL and instantly get:
+**HACKORA** is an **AI-powered hackathon companion** designed to take builders from early problem statements to judge-defended projects with zero guesswork. 
 
-- 🗂️ A navigable **file structure** with noise (`node_modules`, lockfiles, build artifacts) filtered out
-- 🤖 **AI-generated plain-English explanations** for any file, cached so they're instant on repeat views
-- 🔍 **Hybrid semantic search** — ask "where is authentication handled?" in plain English and get a grounded, cited answer synthesized from the actual code, not a hallucinated guess
-- 🗺️ An **interactive architecture map** showing how files depend on each other
-- 📚 **Auto-generated module documentation**, exportable as Markdown
-- 🧭 An AI-synthesized **"where should I start?"** onboarding guide for new contributors
-- 📊 A **code quality score** combining churn, size, and complexity signals
-- 🔗 A **blast radius** view — see every file that depends on a given file before you change it
-- 🔒 **Secret redaction** — accidentally-committed API keys and credentials are detected and masked before any code is sent to the AI provider
+> **"From Ideas to Innovation."**  
+> Your AI-powered workspace to research, plan, build, and defend hackathon projects.
+
+Unlike superficial chatbots or wrapper tools, HACKORA is structured into two purpose-built execution stages:
+
+---
+
+### 🚀 Stage 1 — Explore & Plan
+
+Transform raw problem statements or early innovation ideas into structured, build-ready project foundations:
+
+- 📋 **Forensic Problem Statement Breakdown**: Ingest PDFs, DOCX, TXT, or markdown briefs. HACKORA extracts requirements, constraints, target users, and success criteria without hallucinating unmentioned facts.
+- 💡 **Open Innovation Discovery**: Research competitors and existing approaches, discover unaddressed user pain points, and surface defensible Unique Selling Propositions (USPs).
+- 💬 **Conversational AI Workspace (BYOK)**: Multi-LLM provider support (OpenAI, Anthropic Claude, Google Gemini, Moonshot Kimi, Groq, OpenRouter). Bring your own API key with secure client-side encryption and zero backend key logging.
+- 📐 **On-Demand Technical Blueprints**: Generate 3-way solution comparison matrices, Mermaid architecture diagrams, database schemas, API specs, and full pitch deck blueprints with golden demo paths.
+
+---
+
+### 🛡️ Stage 2 — Analyze & Defend
+
+Paste any GitHub repository URL to verify what your project actually implements and prepare for technical judging:
+
+- 🗂️ **Navigable File Structure**: Instant file tree filtering out lockfiles and build noise.
+- 🤖 **AI File Explanations**: Cached plain-English module explanations.
+- 🔍 **Hybrid Semantic Search (Ask HACKORA)**: Keyword (full-text BM25) + dense vector embeddings fused via Reciprocal Rank Fusion (RRF) for grounded code answers citing files and lines.
+- 🗺️ **Interactive Architecture Map**: Live React Flow dependency graph highlighting critical paths and churn hotspots.
+- 📊 **Code Quality Score & Blast Radius**: Churn, complexity, and transitive dependency analysis ("what breaks if I change this?").
+- ⚖️ **Forensic Requirement Audit & Defense Prep**: Verify whether features in the problem statement exist in code and simulate rigorous judge cross-examinations.
+
+---
 
 <br/>
 
 <div align="center">
-<img src="https://capsule-render.vercel.app/api?type=rect&color=0:6d28d9,100:1a2b4a&height=3&width=100%"/>
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:e85d2c,100:1a2b4a&height=3&width=100%"/>
 </div>
-
-<br/>
-
-## Why This Exists
-
-Every developer who joins an unfamiliar codebase hits the same wall: hundreds of files, no map, and no fast way to answer *"where does X happen?"* or *"what will break if I change this?"*
-
-Most tools that attempt this stop at a thin wrapper around an embedding API. DevLens AI is built differently — it combines **real static analysis** (AST-aware parsing, git history mining, dependency graphs) with an LLM that acts as an explanation layer on top, not the whole product.
 
 <br/>
 
@@ -62,37 +75,26 @@ Most tools that attempt this stop at a thin wrapper around an embedding API. Dev
 
 ```
                     ┌─────────────────────────┐
-                    │      GitHub URL          │
+                    │    HACKORA Workspace    │
                     └────────────┬─────────────┘
                                  ▼
-                    ┌─────────────────────────┐
-                    │   Shallow Clone (temp)   │
-                    └────────────┬─────────────┘
-                                 ▼
-        ┌────────────────────────┼────────────────────────┐
-        ▼                        ▼                        ▼
-┌───────────────┐      ┌──────────────────┐      ┌──────────────────┐
-│  AST Parsing   │      │  Git History      │      │  Content Capture │
-│  (tree-sitter) │      │  Mining (churn)   │      │  (pre-cleanup)   │
-└───────┬────────┘      └────────┬──────────┘      └────────┬─────────┘
-        ▼                        ▼                           ▼
-┌───────────────┐      ┌──────────────────┐      ┌──────────────────┐
-│  Chunking +    │      │  Hotspot Ranking  │      │  AI Summarization │
-│  Embeddings    │      │                    │      │  (Groq)           │
-└───────┬────────┘      └────────┬──────────┘      └────────┬─────────┘
-        ▼                        ▼                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│           Supabase (Postgres + pgvector + full-text)             │
-└──────────────────────────────┬────────────────────────────────────┘
-                                 ▼
-                    ┌─────────────────────────┐
-                    │  Hybrid Search (RRF) +   │
-                    │  RAG Answer Generation   │
-                    └────────────┬─────────────┘
-                                 ▼
-                    ┌─────────────────────────┐
-                    │   React Frontend (UI)    │
-                    └─────────────────────────┘
+         ┌───────────────────────┴────────────────────────┐
+         ▼                                                ▼
+┌─────────────────────────┐                      ┌─────────────────────────┐
+│   Stage 1: Explore      │                      │   Stage 2: Defend       │
+│   & Plan Workspace      │                      │   & Analyze Codebase    │
+└────────────┬────────────┘                      └────────────┬────────────┘
+             ▼                                                ▼
+┌─────────────────────────┐                      ┌─────────────────────────┐
+│ Multi-LLM BYOK Gateway  │                      │ AST Parser & Git Mining │
+│ (OpenAI, Claude, Groq,  │                      │ (tree-sitter, GitPython,│
+│  Gemini, Kimi, Router)  │                      │  sentence-transformers) │
+└────────────┬────────────┘                      └────────────┬────────────┘
+             ▼                                                ▼
+┌─────────────────────────┐                      ┌─────────────────────────┐
+│ Structured Blueprints,  │                      │ Supabase pgvector + RRF │
+│ Diagrams, Pitch Decks   │                      │ Grounded Q&A + Audit    │
+└─────────────────────────┘                      └─────────────────────────┘
 ```
 
 <br/>
@@ -103,141 +105,37 @@ Most tools that attempt this stop at a thin wrapper around an embedding API. Dev
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React · Vite · TypeScript · Tailwind CSS · React Flow |
-| **Backend** | Python · FastAPI |
-| **Database** | Supabase (Postgres) · pgvector · full-text search (GIN) |
+| **Frontend** | React 19 · Vite · TypeScript · Tailwind CSS · React Flow · Lucide |
+| **Backend** | Python 3.12 · FastAPI · Uvicorn |
+| **Database** | Supabase (PostgreSQL + pgvector + GIN Full-Text Indexing) |
 | **AST Parsing** | tree-sitter (Python, JS, TS/TSX) |
-| **Embeddings** | sentence-transformers (`all-MiniLM-L6-v2`, local, free) |
-| **LLM** | Groq (`llama-3.3-70b-versatile`) |
-| **Git Analysis** | GitPython |
+| **Embeddings** | sentence-transformers (`all-MiniLM-L6-v2`) |
+| **AI Providers** | OpenAI · Anthropic · Google Gemini · Moonshot AI · Groq · OpenRouter |
+| **Git Analysis** | GitPython · AST import resolution |
 
 </div>
-
-<br/>
-
-## 🧠 What Makes This Different
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**Most student RAG projects:**
-- Fixed-size text chunking
-- Pure vector similarity search
-- No evaluation of retrieval quality
-- LLM allowed to answer from general knowledge
-- Single confident answer, even when wrong
-
-</td>
-<td width="50%" valign="top">
-
-**DevLens AI:**
-- AST-aware chunking (function/class boundaries)
-- **Hybrid search** — keyword (full-text) + vector, combined via **Reciprocal Rank Fusion**
-- Explicit grounding — answers only from retrieved chunks, cites file + line
-- Clearly states when no relevant code was found, instead of hallucinating
-  
-</td>
-</tr>
-</table>
-
-<br/>
-
-## ✨ Features
-
-<details>
-<summary><b>🔍 Hybrid Semantic Search + RAG</b></summary>
-<br/>
-
-Ask a natural-language question about the codebase. DevLens embeds the query, retrieves candidates via both keyword and vector search, fuses the rankings, and asks the LLM to synthesize a grounded answer — citing exact files and line ranges. If nothing relevant is found, it says so explicitly.
-
-</details>
-
-<details>
-<summary><b>🔥 Git Hotspot Detection</b></summary>
-<br/>
-
-Mines full commit history via `git log --numstat` to rank files by churn frequency — a well-established proxy for bug-proneness and complexity.
-
-</details>
-
-<details>
-<summary><b>🗺️ Interactive Architecture Map</b></summary>
-<br/>
-
-Renders the extracted import/dependency graph as a zoomable, clickable node-link diagram via React Flow, with hotspot files visually flagged.
-
-</details>
-
-<details>
-<summary><b>📚 Auto-Generated Documentation</b></summary>
-<br/>
-
-Synthesizes per-file AI summaries into cohesive, module-level documentation — exportable as a single Markdown file.
-
-</details>
-
-<details>
-<summary><b>🧭 Onboarding Guide</b></summary>
-<br/>
-
-Combines detected entry points, structurally central files (high import in-degree), and hotspots into an AI-suggested reading order for new contributors.
-
-</details>
-
-<details>
-<summary><b>📊 Code Quality Score</b></summary>
-<br/>
-
-A composite, repo-relative score per file combining churn, size, and complexity — surfaced directly in the file tree.
-
-</details>
-
-<details>
-<summary><b>🔗 Blast Radius (Impact Analysis)</b></summary>
-<br/>
-
-Select any file and see every other file that depends on it, direct and transitive, with the actual import chain shown — answers "what breaks if I change this?" before you touch a line of code.
-
-</details>
-
-<details>
-<summary><b>🔒 Secret Redaction</b></summary>
-<br/>
-
-Every file is scanned for common secret patterns (API keys, tokens, private keys, database credentials) before its content is sent to the LLM. Matches are masked, never logged, and never forwarded to the AI provider — protecting against accidentally-committed secrets in public repos.
-
-</details>
-
-<br/>
-
-## 📈 Search Quality — Measured, Not Assumed
-
-Most RAG projects claim their search "works" without ever measuring it. DevLens AI includes an evaluation harness that runs a curated set of real queries against the codebase and compares **keyword-only**, **vector-only**, and **hybrid (RRF)** retrieval, reporting **recall@5** and **Mean Reciprocal Rank (MRR)** for each.
-
-> See [`eval/EVALUATION_RESULTS.md`](./eval/EVALUATION_RESULTS.md) for the full comparison table and example queries once generated for your repo.
 
 <br/>
 
 ## 🚀 Getting Started
 
 ```bash
-# Clone the repo
+# Clone the repository
 git clone https://github.com/<your-username>/DevLens-AI.git
 cd DevLens-AI
 
 # Backend setup
 cd backend
 python -m venv .venv
-.venv\Scripts\Activate.ps1   # Windows
+.venv\Scripts\Activate.ps1   # Windows (.venv/bin/activate on macOS/Linux)
 pip install -r requirements.txt
-cp .env.example .env          # add your Supabase + Groq keys
+cp .env.example .env          # Add your Supabase + Groq/AI provider keys
 python app/main.py
 
-# Frontend setup (new terminal)
+# Frontend setup (separate terminal)
 cd frontend
 npm install
-cp .env.example .env          # set VITE_API_BASE_URL=http://localhost:8000
+cp .env.example .env          # Set VITE_API_BASE_URL=http://localhost:8000
 npm run dev
 ```
 
@@ -245,42 +143,15 @@ npm run dev
 
 ## ☁️ Deployment
 
-Deployed as two independent services:
-
-| Service | Platform | Notes |
-|---|---|---|
-| Frontend | [Vercel](https://vercel.com) | Reads `VITE_API_BASE_URL` at build time — a redeploy is required after changing it |
-| Backend | [Render](https://render.com) | Free tier (512MB RAM) — embedding model is lazy-loaded on first use to fit within the memory limit; service sleeps after inactivity |
-
-<br/>
-
-## 🗺️ Roadmap
-
-- [x] Repo ingestion + file tree
-- [x] Git hotspot detection + dependency parsing
-- [x] AI file explainer (cached, plain-language)
-- [x] AST-aware chunking (tree-sitter)
-- [x] Embeddings + pgvector storage
-- [x] Hybrid search (keyword + vector, RRF)
-- [x] RAG answer generation with citations
-- [x] Interactive architecture map
-- [x] Auto-generated documentation
-- [x] Onboarding guide
-- [x] Code quality score
-- [x] Blast-radius impact analysis
-- [x] Secret detection & redaction before LLM calls
-- [x] Retrieval evaluation harness (recall@k, MRR benchmarking)
-- [x] Animated landing page + loading experience
-- [x] Deployed live (Vercel + Render)
-
-**All core phases shipped.** Future ideas: custom domain, demo video, multi-language chunking beyond Python/JS/TS.
+- **Frontend**: [Vercel](https://vercel.com)
+- **Backend**: [Render](https://render.com)
 
 <br/>
 
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:6d28d9,100:1a2b4a&height=120&section=footer"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:e85d2c,100:1a2b4a&height=120&section=footer"/>
 
-**Built by [Rishabh](https://github.com/<user-Rishabh>)** · B.Tech AI & Data Science, VESIT 
+**HACKORA — From Ideas to Innovation.**
 
 </div>

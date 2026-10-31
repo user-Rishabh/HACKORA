@@ -49,7 +49,7 @@ export default function OnboardingGuide({ repoId, onSelectFile }: OnboardingGuid
       setGuideData(null);
 
       try {
-        console.log(`[DevLens AI] Fetching onboarding guide for repo: "${repoId}"`);
+        console.log(`[HACKORA] Fetching onboarding guide for repo: "${repoId}"`);
         const response = await fetch(`${API_BASE_URL}/api/repos/${repoId}/onboarding-guide`);
         const data = await response.json();
 

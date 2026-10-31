@@ -162,7 +162,7 @@ export default function LandingPage({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-display font-extrabold text-base tracking-tight text-[#1A1D29]">DevLens <span className="text-[#3B5FE0]">AI</span></span>
+              <span className="font-display font-extrabold text-base tracking-tight text-[#1A1D29]">HACKORA</span>
               <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#3B5FE0]/10 border border-[#3B5FE0]/25 text-[#3B5FE0]">
                 Stage 2
               </span>
@@ -652,7 +652,7 @@ export default function LandingPage({
           <div className="text-center max-w-xl mx-auto mb-16 reveal-on-scroll">
             <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">ROUTE WAYPOINTS</span>
             <h2 className="font-display text-2xl sm:text-4xl font-extrabold text-[#1A1D29] mt-2">
-              How You Navigate Code with DevLens
+              How You Navigate Code with HACKORA
             </h2>
             <p className="text-xs sm:text-sm text-[#6B7280] mt-2">
               From raw repository link to confident code changes in 4 simple stops.
@@ -678,7 +678,7 @@ export default function LandingPage({
                 </div>
                 <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Drop a GitHub URL</h3>
                 <p className="text-xs text-[#6B7280] leading-relaxed">
-                  Provide any public GitHub repository link. DevLens clones the codebase into an isolated temporary environment with shallow history depth up to 100 commits without needing local Docker setup or API keys.
+                  Provide any public GitHub repository link. HACKORA clones the codebase into an isolated temporary environment with shallow history depth up to 100 commits without needing local Docker setup or API keys.
                 </p>
               </div>
             </div>
@@ -694,7 +694,7 @@ export default function LandingPage({
                 </div>
                 <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">We Map Structure</h3>
                 <p className="text-xs text-[#6B7280] leading-relaxed">
-                  DevLens parses internal imports across Python, JavaScript, and TypeScript source files while parsing git commit histories to construct a live 2D dependency graph and hotspot risk map.
+                  HACKORA parses internal imports across Python, JavaScript, and TypeScript source files while parsing git commit histories to construct a live 2D dependency graph and hotspot risk map.
                 </p>
               </div>
             </div>
@@ -796,11 +796,11 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#3B5FE0] uppercase tracking-wider block">
-                  LEGEND — ASK DEVLENS
+                  LEGEND — ASK HACKORA
                 </span>
                 <Sparkles className="w-4 h-4 text-[#3B5FE0] group-hover:scale-110 transition-transform" />
               </div>
-              <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Ask DevLens (Semantic & RAG Search)</h3>
+              <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Ask HACKORA (Semantic & RAG Search)</h3>
               <p className="text-xs text-[#6B7280] leading-relaxed">
                 Combines sparse keyword matching with dense sentence-transformer vector embeddings using Reciprocal Rank Fusion (RRF). Finds code whether searching by exact function name or by describing conceptual intent in natural language.
               </p>
@@ -891,7 +891,7 @@ export default function LandingPage({
               Designed for Engineering Rigor, Not Just LLM Wrappers
             </h2>
             <p className="text-xs sm:text-sm text-[#6B7280] mt-2 leading-relaxed">
-              DevLens AI combines static AST analysis, vector similarity, and git history telemetry into a deterministic local graph engine.
+              HACKORA combines static AST analysis, vector similarity, and git history telemetry into a deterministic local graph engine.
             </p>
           </div>
 
@@ -957,7 +957,7 @@ export default function LandingPage({
           <div className="text-center max-w-2xl mx-auto mb-10 reveal-on-scroll">
             <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">TECHNOLOGY STACK</span>
             <h2 className="font-display text-xl sm:text-3xl font-extrabold text-[#1A1D29] mt-2">
-              Built With DevLens AI Tech Stack
+              Built With HACKORA Engine Tech Stack
             </h2>
             <p className="text-xs text-[#6B7280] mt-2 leading-relaxed">
               Explore the engineering choices powering our codebase ingestion, AST analysis, and hybrid search pipelines.
@@ -1026,7 +1026,7 @@ export default function LandingPage({
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-[#E5E1DA] flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Navigation className="w-4 h-4 text-[#E85D2C]" />
-            <span className="font-display font-bold text-sm text-[#1A1D29]">DevLens AI Engine</span>
+            <span className="font-display font-bold text-sm text-[#1A1D29]">HACKORA Engine</span>
             <span className="text-xs font-mono text-[#6B7280]">© 2026</span>
           </div>
 

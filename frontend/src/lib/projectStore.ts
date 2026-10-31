@@ -1,5 +1,5 @@
 // ==============================================================================
-// DEVLENS AI - PROJECT & PROVIDER PERSISTENCE STORE
+// HACKORA - PROJECT & PROVIDER PERSISTENCE STORE
 // ==============================================================================
 
 export interface PSExplanation {

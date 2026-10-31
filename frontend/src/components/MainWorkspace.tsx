@@ -42,7 +42,7 @@ export default function MainWorkspace({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-bold text-lg tracking-tight text-[#1A1D29]">
-                  DevLens <span className="text-[#E85D2C]">AI</span>
+                  HACKORA
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[#E5E1DA]/60 border border-[#E5E1DA] text-[#6B7280]">
                   Workspace
@@ -75,18 +75,18 @@ export default function MainWorkspace({
         <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E5E1DA] text-xs font-mono text-[#6B7280] shadow-2xs mb-5">
             <span className="w-2 h-2 rounded-full bg-[#E85D2C] animate-pulse" />
-            <span>Structured Intelligence for Hackathons & Technical Reviews</span>
+            <span>HACKORA — From Ideas to Innovation</span>
           </div>
 
           <h1 className="font-display font-extrabold text-3xl sm:text-5xl text-[#1A1D29] tracking-tight leading-[1.15] mb-5">
-            From your idea to a project{' '}
+            HACKORA — Your AI-Powered{' '}
             <span className="text-[#E85D2C] underline decoration-[#E85D2C]/30 underline-offset-8">
-              you can defend.
+              Hackathon Companion
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-[#6B7280] leading-relaxed max-w-2xl mx-auto font-normal">
-            Understand problems, plan solutions, analyze implementations, and prepare to explain your technical decisions.
+            Research smarter, build better, and defend your ideas with confidence. HACKORA brings problem analysis, AI-powered research, technical planning, code intelligence, and presentation preparation into one workspace.
           </p>
         </div>
 
@@ -263,14 +263,14 @@ export default function MainWorkspace({
         <div className="mt-12 text-center text-xs font-mono text-[#6B7280] max-w-2xl mx-auto flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#059669] shrink-0" />
           <span>
-            Verifiable code evidence and grounded citations. DevLens AI never hallucinates execution status or fabricates code findings.
+            Verifiable code evidence and grounded citations. HACKORA never hallucinates execution status or fabricates code findings.
           </span>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="w-full border-t border-[#E5E1DA] bg-white py-4 px-6 text-center text-xs font-mono text-[#6B7280]">
-        DevLens AI &copy; {new Date().getFullYear()} &mdash; Intelligent Developer & Hackathon Workspace
+        HACKORA &copy; {new Date().getFullYear()} &mdash; AI-Powered Hackathon Companion
       </footer>
     </div>
   );

@@ -106,7 +106,7 @@ KEY_FORMAT_PREFIXES = {
 }
 
 DEFAULT_REQUEST_HEADERS = {
-    "User-Agent": "DevLensAI/1.0 (BYOK; Multi-Provider Client)",
+    "User-Agent": "HACKORA/1.0 (BYOK; Multi-Provider Client)",
     "Accept": "application/json",
 }
 
@@ -568,7 +568,7 @@ class OpenRouterAdapter(OpenAICompatibleAdapter):
             provider_id="openrouter",
             base_url="https://openrouter.ai/api/v1/chat/completions",
             models_url="https://openrouter.ai/api/v1/models",
-            extra_headers={"HTTP-Referer": "https://devlens.ai", "X-Title": "DevLens AI"}
+            extra_headers={"HTTP-Referer": "https://hackora.ai", "X-Title": "HACKORA"}
         )
 
 # ==============================================================================

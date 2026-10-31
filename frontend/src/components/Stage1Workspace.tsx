@@ -157,7 +157,7 @@ export default function Stage1Workspace({
       }
     } catch (err: any) {
       console.error(err);
-      setPsError(err.message || 'Error communicating with DevLens AI backend.');
+      setPsError(err.message || 'Error communicating with HACKORA backend.');
     } finally {
       setIsAnalyzingPS(false);
     }
@@ -200,7 +200,7 @@ export default function Stage1Workspace({
       }
     } catch (err: any) {
       console.error(err);
-      setInnovationError(err.message || 'Error communicating with DevLens AI backend.');
+      setInnovationError(err.message || 'Error communicating with HACKORA backend.');
     } finally {
       setIsExploringInnovation(false);
     }
@@ -638,7 +638,7 @@ export default function Stage1Workspace({
                 </div>
 
                 <p className="text-xs font-mono text-[#6B7280] leading-relaxed">
-                  Enter an early-stage concept, market hypothesis, or research theme. DevLens AI will research existing incumbent solutions, surface their critical limitations, and recommend defensible differentiation angles.
+                  Enter an early-stage concept, market hypothesis, or research theme. HACKORA will research existing incumbent solutions, surface their critical limitations, and recommend defensible differentiation angles.
                 </p>
 
                 <textarea

@@ -47,7 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'overview',     label: 'Overview',        icon: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'defense',      label: 'Defense & Audit', icon: <Award className="w-4 h-4" /> },
   { id: 'files',        label: 'Files',           icon: <FolderTree className="w-4 h-4" /> },
-  { id: 'search',       label: 'Ask DevLens',     icon: <Sparkles className="w-4 h-4" /> },
+  { id: 'search',       label: 'Ask HACKORA',     icon: <Sparkles className="w-4 h-4" /> },
   { id: 'architecture', label: 'Architecture',    icon: <Network className="w-4 h-4" /> },
   { id: 'health',       label: 'Health',          icon: <ShieldCheck className="w-4 h-4" /> },
 ];
@@ -388,7 +388,7 @@ export default function Home() {
     setIndexingStatus('indexing');
     setIndexingError(null);
     try {
-      console.log(`[DevLens AI] Starting background indexing for: ${id} (force_reindex=${force})`);
+      console.log(`[HACKORA] Starting background indexing for: ${id} (force_reindex=${force})`);
       const response = await fetch(`${API_BASE_URL}/api/repos/${id}/index${force ? '?force_reindex=true' : ''}`, {
         method: 'POST',
       });
@@ -398,9 +398,9 @@ export default function Home() {
       }
       setChunksIndexed(data.chunks_indexed);
       setIndexingStatus('success');
-      console.log(`[DevLens AI] Background indexing complete for: ${id}. Chunks indexed: ${data.chunks_indexed}`);
+      console.log(`[HACKORA] Background indexing complete for: ${id}. Chunks indexed: ${data.chunks_indexed}`);
     } catch (err: any) {
-      console.error(`[DevLens AI] Indexing failed for repo: ${id}`, err);
+      console.error(`[HACKORA] Indexing failed for repo: ${id}`, err);
       setIndexingError(err.message || 'Repository indexing failed.');
       setIndexingStatus('error');
     }
@@ -486,7 +486,7 @@ export default function Home() {
       // Fetch code quality scores in background
       fetchQualityScores(data.repo_id);
 
-      console.log('=========== DevLens AI Ingestion Report ===========');
+      console.log('=========== HACKORA Ingestion Report ===========');
       console.log('Repo ID:', data.repo_id);
       console.log('Project Name:', data.repo_name);
       console.log('Dependency Edges (Internal Imports):', data.dependencies);
@@ -1002,7 +1002,7 @@ export default function Home() {
     <div className="pt-2 sm:pt-3 px-6 pb-8 md:px-8 max-w-6xl mx-auto w-full">
       <div className="mb-6">
         <span className="text-xs font-mono text-[#E85D2C] bg-[#E85D2C]/12 border border-[#E85D2C]/30 px-2.5 py-0.5 rounded-md uppercase tracking-wider font-bold inline-block">Codebase Intelligence</span>
-        <h2 className="text-2xl font-bold text-[#1A1D29] mt-1.5" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>Ask DevLens</h2>
+        <h2 className="text-2xl font-bold text-[#1A1D29] mt-1.5" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>Ask HACKORA</h2>
         <p className="text-xs text-[#6B7280] mt-2 font-mono leading-relaxed">
           Semantic/RAG codebase search and questions. Ask architectural or behavioral questions in plain English. We scan both BM25 text keyword index and vector embeddings to extract relevant code blocks and explain them.
         </p>

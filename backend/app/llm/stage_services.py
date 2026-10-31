@@ -97,7 +97,7 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
         valid_model = p_info.get("default_model", "openai/gpt-oss-120b") if p_info else "openai/gpt-oss-120b"
 
     system_prompt = (
-        "You are an elite hackathon mentor and technical judge for DevLens AI. "
+        "You are an elite hackathon mentor and technical judge for HACKORA. "
         "Analyze the provided problem statement document/text. Produce a detailed, structured "
         "forensic breakdown in valid JSON format. Follow these strict rules:\n"
         "1. Do NOT invent requirements or judging criteria that are absent from the source document.\n"
@@ -157,7 +157,7 @@ def explore_open_innovation(prompt: str, provider: str = "groq", model: Optional
     clean_prompt = prompt.strip()
 
     system_prompt = (
-        "You are an expert venture architect and technical judge for DevLens AI. "
+        "You are an expert venture architect and technical judge for HACKORA. "
         "Analyze the following open innovation topic or idea. No live web search tool is connected: do not claim that you performed current research, do not invent citations, and label named competitors or market claims as examples that require verification. Provide "
         "exploration of existing market solutions, their flaws/limitations, and high-impact "
         "angles for differentiation. Return valid JSON matching:\n"
@@ -198,7 +198,7 @@ def chat_stage1(
     """
     from app.llm.provider_manager import execute_multi_provider_chat
     system_prompt = (
-        "You are the Stage 1 AI Planning Partner inside DevLens AI (Explore & Plan). "
+        "You are the Stage 1 AI Planning Partner inside HACKORA (Explore & Plan). "
         "Your role is to guide the developer from raw ideas to a defensible, production-grade technical plan. "
         "Always give concrete, technically rigorous advice (referencing real architectural patterns, libraries, "
         "data models, latency considerations, and hackathon evaluation criteria). "
@@ -262,7 +262,7 @@ def generate_stage1_deliverable(
         ),
         "solution_comparison": (
             "Generate a rigorous 3-way solution comparison matrix. "
-            "Compare Approach A (Traditional / Off-the-shelf), Approach B (Microservices / Complex Enterprise), and Approach C (Recommended DevLens Architecture). Return valid JSON:\n"
+            "Compare Approach A (Traditional / Off-the-shelf), Approach B (Microservices / Complex Enterprise), and Approach C (Recommended HACKORA Architecture). Return valid JSON:\n"
             "{\n"
             "  \"title\": \"Solution Comparison Matrix\",\n"
             "  \"approaches\": [\n"
@@ -377,7 +377,7 @@ def generate_stage1_deliverable(
             provider=provider or "groq",
             model=model or "",
             messages=[{"role": "user", "content": f"Context:\n{context[:4000]}{extra_notes}"}],
-            system_prompt=f"You are DevLens AI deliverable generator.\n{instruction}",
+            system_prompt=f"You are HACKORA deliverable generator.\n{instruction}",
             custom_key=custom_key,
             temperature=0.2,
             max_tokens=2400
@@ -419,10 +419,10 @@ def generate_stage1_deliverable(
     elif deliverable_type == "pitch_deck":
         return {
             "title": "Pitch Deck & Presentation Blueprint",
-            "elevator_pitch": "DevLens AI takes builders from early-stage concept to a hardened, judge-ready codebase with zero guesswork.",
+            "elevator_pitch": "HACKORA takes builders from early-stage concept to a hardened, judge-ready codebase with zero guesswork.",
             "slides": [
                 {"slide_number": 1, "slide_title": "The Problem", "headline": "Developer Hackathons Fail in the Last Mile", "bullet_points": ["Ideas are brilliant, but execution falls apart during live Q&A", "Judges ask tough architectural questions that teams haven't prepared for"], "talking_points": "Every developer has experienced the sting of building a great project only to stumble when a judge asks about scalability or test evidence."},
-                {"slide_number": 2, "slide_title": "The Solution", "headline": "Explore & Plan, Analyze & Defend", "bullet_points": ["Two-stage intelligence platform built specifically for technical projects", "Grounded codebase verification with file and line evidence"], "talking_points": "DevLens AI acts as both your technical co-founder during planning, and your toughest judge during defense."}
+                {"slide_number": 2, "slide_title": "The Solution", "headline": "Explore & Plan, Analyze & Defend", "bullet_points": ["Two-stage intelligence platform built specifically for technical projects", "Grounded codebase verification with file and line evidence"], "talking_points": "HACKORA acts as both your technical co-founder during planning, and your toughest judge during defense."}
             ],
             "demo_golden_path": "1. Show problem statement breakdown -> 2. Generate architecture blueprint -> 3. Switch to Stage 2 and inspect verified implementation evidence."
         }
@@ -563,7 +563,7 @@ def verify_requirements_against_codebase(repo_id: str, problem_statement: str) -
     files_summary = ", ".join(all_files[:40]) if all_files else "Repository source files indexed"
 
     system_prompt = (
-        "You are an objective, forensic code verification auditor for DevLens AI. "
+        "You are an objective, forensic code verification auditor for HACKORA. "
         "Analyze the provided problem statement requirements against the repository file structure and codebase context. "
         "For each key requirement, evaluate whether there is clear static code evidence in the repository. "
         "Assign one of four exact statuses:\n"
