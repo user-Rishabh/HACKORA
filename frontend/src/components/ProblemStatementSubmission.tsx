@@ -108,7 +108,7 @@ interface ModelOption {
 
   // Model & Provider configuration - directly exposed to user
   const [activeProvider, setActiveProvider] = useState<string>('groq');
-  const [activeModel, setActiveModel] = useState<string>('llama-3.3-70b-versatile');
+  const [activeModel, setActiveModel] = useState<string>('llama-3.1-8b-instant');
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

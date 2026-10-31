@@ -73,13 +73,22 @@ function renderInline(text: string): React.ReactNode {
 // Safe normalizer to format collapsed Markdown table rows and section headers
 function normalizeMarkdown(raw: string): string {
   if (!raw) return '';
-  let text = raw.replace(/\r\n/g, '\n');
+
+  // 0. Auto-convert raw JSON outputs into clean markdown
+  let text = tryConvertJsonToMarkdown(raw);
+  text = text.replace(/\r\n/g, '\n');
 
   // 1. Separate introductory text or headers from immediately attached tables
-  text = text.replace(/^([^|\n]+?)\s*(\|[^|\n]+\|[^|\n]+)/gm, '$1\n$2');
+  // e.g. "1️⃣ Why This Matters | Insight | Evidence |" -> "1️⃣ Why This Matters\n| Insight | Evidence |"
+  text = text.replace(/^([^|\n]+?)\s+(\|[^|\n]+\|)/gm, '$1\n$2');
 
-  // 2. Expand collapsed table pipes "| |" into newlines "|\n|"
-  text = text.replace(/\|\s*\|\s*/g, '|\n|');
+  // 2. Expand collapsed table pipes "| |" or "|  |" into newlines "|\n|"
+  // Loop up to 10 passes to ensure nested/consecutive collapsed pipes are fully expanded
+  let pass = 0;
+  while (/\|\s*\|\s*/.test(text) && pass < 10) {
+    text = text.replace(/\|\s*\|\s*/g, '|\n|');
+    pass++;
+  }
 
   // 3. Ensure horizontal rules "---" have newlines before and after
   text = text.replace(/([^\n])\s*(---|\*\*\*)\s*([^\n])/g, '$1\n\n$2\n\n$3');
@@ -88,6 +97,82 @@ function normalizeMarkdown(raw: string): string {
   text = text.replace(/([^\n])\n?([0-9]+[️⃣\.]\s+[^\n]+)/g, '$1\n\n$2');
 
   return text;
+}
+
+// Convert raw JSON LLM responses (e.g. { "title": "...", "overview": "..." }) into structured Markdown
+function tryConvertJsonToMarkdown(raw: string): string {
+  const trimmed = raw.trim();
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+    try {
+      const data = JSON.parse(trimmed);
+      if (typeof data === 'object' && data !== null) {
+        if (Array.isArray(data)) {
+          return data
+            .map((item, idx) => {
+              if (typeof item === 'object') {
+                return (
+                  `### Item ${idx + 1}\n` +
+                  Object.entries(item)
+                    .map(([k, v]) => `**${k}**: ${Array.isArray(v) ? v.join(', ') : v}`)
+                    .join('\n\n')
+                );
+              }
+              return `- ${item}`;
+            })
+            .join('\n\n');
+        }
+
+        const lines: string[] = [];
+        const title = data.title || data.name || data.project_title || data.concept;
+        if (title) {
+          lines.push(`## 🎯 ${title}\n`);
+        }
+
+        const keyLabels: Record<string, string> = {
+          overview: '📋 Problem Overview',
+          actual_problem: '🔍 Actual Problem to Solve',
+          target_users: '👥 Target Users & Stakeholders',
+          requirements: '📋 Requirements & Deliverables',
+          constraints: '⚠️ Constraints & Limitations',
+          expected_outcomes: '🏆 Expected Outcomes & Success Metrics',
+          important_terms: '💡 Key Technical Concepts',
+          refined_concept: '💡 Refined Concept',
+          market_context: '🌐 Market Context',
+          existing_solutions: '⚙️ Existing Solutions & Limitations',
+          differentiation_opportunities: '🚀 Differentiation Opportunities',
+          suggested_mvp_scope: '🛠️ Suggested MVP Scope',
+        };
+
+        for (const [key, val] of Object.entries(data)) {
+          if (['title', 'name', 'project_title', 'concept'].includes(key)) continue;
+          const heading = keyLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          lines.push(`### ${heading}`);
+
+          if (Array.isArray(val)) {
+            val.forEach((item) => {
+              if (typeof item === 'object' && item !== null) {
+                const subProps = Object.entries(item)
+                  .map(([ik, iv]) => `**${ik}**: ${iv}`)
+                  .join(' | ');
+                lines.push(`- ${subProps}`);
+              } else {
+                lines.push(`- ${item}`);
+              }
+            });
+          } else if (typeof val === 'object' && val !== null) {
+            lines.push(Object.entries(val).map(([ik, iv]) => `- **${ik}**: ${iv}`).join('\n'));
+          } else {
+            lines.push(`${val}`);
+          }
+          lines.push('');
+        }
+        return lines.join('\n').trim();
+      }
+    } catch {
+      // Continue to standard markdown if JSON parsing fails
+    }
+  }
+  return raw;
 }
 
 // Check if a line is a markdown table divider like |---|---| or |:---|---:| or :---|---:

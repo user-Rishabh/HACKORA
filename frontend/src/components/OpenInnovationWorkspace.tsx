@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { API_BASE_URL } from '../lib/apiClient';
-import { getProviderCredential } from '../lib/projectStore';
+import { useAuth } from '../context/AuthContext';
 import ProviderSettingsModal from './ProviderSettingsModal';
 
 interface OpenInnovationWorkspaceProps {
@@ -35,8 +35,9 @@ export default function OpenInnovationWorkspace({
   const [innovationAnalysis, setInnovationAnalysis] = useState<any | null>(null);
   const [innovationError, setInnovationError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const { token } = useAuth();
   const [provider, setProvider] = useState('groq');
-  const [model, setModel] = useState('llama-3.3-70b-versatile');
+  const [model, setModel] = useState('llama-3.1-8b-instant');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleCopy = (text: string, key: string) => {
@@ -55,10 +56,13 @@ export default function OpenInnovationWorkspace({
     setInnovationError(null);
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch(`${API_BASE_URL}/api/stage1/explore-open-innovation`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: innovationPrompt.trim(), provider, model, api_key: getProviderCredential(provider)?.apiKey }),
+        headers,
+        body: JSON.stringify({ prompt: innovationPrompt.trim(), provider, model }),
       });
 
       if (!response.ok) {

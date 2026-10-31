@@ -14,8 +14,11 @@ import {
   ExternalLink,
   Github,
   Sparkles,
-  BookOpen
+  BookOpen,
+  LogOut,
+  User,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface MainWorkspaceProps {
   onSelectStage: (stage: 'stage1' | 'stage2') => void;
@@ -30,6 +33,7 @@ export default function MainWorkspace({
   isRepoAnalyzed,
   repoName,
 }: MainWorkspaceProps) {
+  const { user, signOut } = useAuth();
   return (
     <div className="min-h-screen bg-[#FAFAF7] text-[#1A1D29] flex flex-col justify-between selection:bg-[#E85D2C]/20 selection:text-[#E85D2C]">
       {/* Top Bar Header */}
@@ -65,6 +69,25 @@ export default function MainWorkspace({
               <Github className="w-3.5 h-3.5" />
               <span>GitHub</span>
             </a>
+
+            {user && (
+              <div className="flex items-center gap-2 pl-2 border-l border-[#E5E1DA]">
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAFAF7] border border-[#E5E1DA] text-[11px] font-mono text-[#4A5568]"
+                  title={user.email}
+                >
+                  <User className="w-3 h-3 text-[#E85D2C]" />
+                  <span className="max-w-[140px] truncate">{user.email}</span>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="p-1.5 rounded-lg border border-[#E5E1DA] hover:border-red-300 hover:bg-red-50 text-[#6B7280] hover:text-red-600 transition-colors cursor-pointer"
+                  title="Sign Out of HACKORA"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>

@@ -94,7 +94,7 @@ def explain_problem_statement(text: str, provider: str = "groq", model: Optional
     p_info = PROVIDER_CATALOG.get(pid)
     valid_model = model
     if not valid_model or (p_info and not any(m["id"] == valid_model for m in p_info.get("models", []))):
-        valid_model = p_info.get("default_model", "openai/gpt-oss-120b") if p_info else "openai/gpt-oss-120b"
+        valid_model = p_info.get("default_model", "llama-3.1-8b-instant") if p_info else "llama-3.1-8b-instant"
 
     system_prompt = (
         "You are an elite hackathon mentor and technical judge for HACKORA. "

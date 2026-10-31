@@ -7,8 +7,10 @@ import zlib
 import zipfile
 import xml.etree.ElementTree as ET
 from typing import Optional, Union
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Header
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Header, Depends
 from pydantic import BaseModel
+from app.auth import get_current_user, get_optional_user, AuthenticatedUser
+from app.services.credential_service import get_credential_service, mask_api_key
 
 from app.ingestion.clone import clone_repo, validate_github_url
 from app.ingestion.filter import build_file_tree
@@ -844,6 +846,11 @@ def export_repository_docs(repo_id: str, repo_name: str = Query(..., description
 # MULTI-PROVIDER & MULTI-MODEL LLM ENDPOINTS
 # ==============================================================================
 
+class SaveCredentialRequest(BaseModel):
+    provider: str
+    api_key: str
+    default_model: Optional[str] = None
+
 class ValidateProviderRequest(BaseModel):
     provider: str
     api_key: Optional[str] = None
@@ -897,6 +904,130 @@ class Stage2MockInterviewRequest(BaseModel):
     repo_name: Optional[str] = None
 
 
+def resolve_user_provider_key(
+    user: Optional[AuthenticatedUser],
+    provider: str,
+    direct_key: Optional[str] = None
+) -> Optional[str]:
+    """
+    Resolves the active API key for an AI provider in order of precedence:
+    1. User's isolated server credential in CredentialStore (Redis / InMemory)
+    2. Explicit direct key (cleaned, if provided by client)
+    3. Server-side environment variable (e.g. GROQ_API_KEY)
+    Never logs the resolved key.
+    """
+    from app.llm.provider_manager import clean_api_key, PROVIDER_CATALOG
+
+    # 1. User credential store
+    if user and user.user_id:
+        store = get_credential_service()
+        user_key = store.get_credential(user.user_id, user.session_id, provider)
+        if user_key:
+            return user_key
+
+    # 2. Direct key supplied by client
+    cleaned = clean_api_key(direct_key)
+    if cleaned:
+        return cleaned
+
+    # 3. Server environment variable fallback
+    p_info = PROVIDER_CATALOG.get(provider.lower())
+    if p_info:
+        env_var = p_info.get("key_env_var")
+        if env_var:
+            return os.getenv(env_var)
+
+    return None
+
+
+@router.post("/credentials")
+def save_provider_credential(
+    req: SaveCredentialRequest,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Temporarily stores a validated AI provider API key for the authenticated user and session.
+    Never persists keys in PostgreSQL. Stored in Redis (or InMemory in local dev) with TTL.
+    """
+    from app.llm.provider_manager import validate_credentials
+    val = validate_credentials(req.provider, req.api_key)
+    if not val.get("valid"):
+        err_msg = val.get("error") or val.get("message") or f"Invalid API key for {req.provider}."
+        if not ("connection error" in err_msg.lower() or "getaddrinfo" in err_msg.lower() or "timed out" in err_msg.lower()):
+            raise HTTPException(status_code=400, detail=err_msg)
+
+    store = get_credential_service()
+    store.set_credential(
+        user_id=user.user_id,
+        session_id=user.session_id,
+        provider=req.provider,
+        api_key=req.api_key,
+        default_model=req.default_model,
+        ttl_seconds=3600
+    )
+    return {
+        "provider": req.provider.lower(),
+        "status": "connected",
+        "masked_key": mask_api_key(req.api_key),
+        "model": req.default_model or "",
+        "expires_in": 3600
+    }
+
+
+@router.get("/credentials")
+def list_provider_credentials(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Returns list of configured AI provider credentials with masked keys and status.
+    Never returns raw secret keys.
+    """
+    store = get_credential_service()
+    creds = store.list_credentials(user.user_id, user.session_id)
+    return {"credentials": creds}
+
+
+@router.delete("/credentials/{provider}")
+def delete_provider_credential(
+    provider: str,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Deletes a single temporary provider credential for the authenticated user session.
+    """
+    store = get_credential_service()
+    removed = store.delete_credential(user.user_id, user.session_id, provider)
+    return {"provider": provider.lower(), "deleted": removed}
+
+
+@router.post("/credentials/cleanup")
+def cleanup_user_credentials(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Securely clears all temporary AI provider keys for this session (called on user logout).
+    """
+    store = get_credential_service()
+    count = store.clear_session(user.user_id, user.session_id)
+    return {"status": "cleared", "count": count}
+
+
+@router.post("/credentials/validate")
+def validate_credential_endpoint(
+    req: ValidateProviderRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+):
+    """
+    Validates an API key against the provider. If no key is sent in payload, uses stored key.
+    """
+    from app.llm.provider_manager import validate_credentials
+    effective_key = req.api_key
+    if not effective_key and user:
+        store = get_credential_service()
+        effective_key = store.get_credential(user.user_id, user.session_id, req.provider)
+    return validate_credentials(req.provider, effective_key)
+
+
 @router.get("/llm/providers")
 def get_llm_providers():
     """
@@ -919,28 +1050,35 @@ def validate_provider_credentials(req: ValidateProviderRequest):
 @router.get("/llm/models")
 def get_provider_models(
     provider: str = Query(..., description="Provider ID"),
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
     x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
 ):
     """
     Lists dynamically available models for a given provider.
     """
     from app.llm.provider_manager import list_available_models
-    return {"provider": provider, "models": list_available_models(provider, x_provider_key)}
+    effective_key = resolve_user_provider_key(user, provider, x_provider_key)
+    return {"provider": provider, "models": list_available_models(provider, effective_key)}
 
 
 @router.post("/llm/chat")
-def run_multiprovider_chat(req: MultiProviderChatRequest):
+def run_multiprovider_chat(
+    req: MultiProviderChatRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
+):
     """
     Synchronous multi-provider chat completion.
     """
     from app.llm.provider_manager import execute_multi_provider_chat
     try:
+        effective_key = resolve_user_provider_key(user, req.provider, req.api_key or x_provider_key)
         reply = execute_multi_provider_chat(
             provider=req.provider,
             model=req.model or "",
             messages=req.messages,
             system_prompt="\n\n".join(part for part in [req.system_prompt or "", req.context or ""] if part),
-            custom_key=req.api_key,
+            custom_key=effective_key,
             temperature=req.temperature or 0.3
         )
         return {"reply": reply}
@@ -951,15 +1089,16 @@ def run_multiprovider_chat(req: MultiProviderChatRequest):
 @router.post("/llm/chat/stream")
 def stream_multiprovider_chat(
     req: MultiProviderChatRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
     x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
 ):
     """
     Streaming multi-provider chat using Server-Sent Events (SSE).
     """
-    from app.llm.provider_manager import stream_multi_provider_chat, clean_api_key
+    from app.llm.provider_manager import stream_multi_provider_chat
     from fastapi.responses import StreamingResponse
     try:
-        effective_key = clean_api_key(req.api_key or x_provider_key)
+        effective_key = resolve_user_provider_key(user, req.provider, req.api_key or x_provider_key)
         generator = stream_multi_provider_chat(
             provider=req.provider,
             model=req.model or "",
@@ -1062,6 +1201,7 @@ async def api_extract_document(file: UploadFile = File(...)):
 @router.post("/stage1/explain-ps")
 def api_explain_problem_statement(
     req: Stage1ExplainRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
     x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
 ):
     """
@@ -1070,9 +1210,8 @@ def api_explain_problem_statement(
     if not req.problem_statement.strip():
         raise HTTPException(status_code=400, detail="Problem statement text cannot be empty.")
     from app.llm.stage_services import explain_problem_statement
-    from app.llm.provider_manager import clean_api_key
     try:
-        effective_key = clean_api_key(req.api_key or x_provider_key)
+        effective_key = resolve_user_provider_key(user, req.provider or "groq", req.api_key or x_provider_key)
         return explain_problem_statement(
             text=req.problem_statement,
             provider=req.provider or "groq",
@@ -1099,19 +1238,24 @@ def api_explore_open_innovation(req: Stage1ExploreRequest):
 
 
 @router.post("/stage1/chat")
-def api_chat_stage1(req: Stage1ChatRequest):
+def api_chat_stage1(
+    req: Stage1ChatRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
+):
     """
     Stage 1: Conversational AI workspace for exploring solutions, technical choices, and feasibility.
     """
     from app.llm.stage_services import chat_stage1
     try:
+        effective_key = resolve_user_provider_key(user, req.provider or "groq", req.api_key or x_provider_key)
         reply = chat_stage1(
             messages=req.messages,
             context=req.context,
             mode=req.mode or "problem_statement",
             provider=req.provider or "groq",
             model=req.model,
-            custom_key=req.api_key
+            custom_key=effective_key
         )
         return {"reply": reply}
     except Exception as e:
@@ -1119,20 +1263,25 @@ def api_chat_stage1(req: Stage1ChatRequest):
 
 
 @router.post("/stage1/generate-deliverable")
-def api_generate_stage1_deliverable(req: Stage1DeliverableRequest):
+def api_generate_stage1_deliverable(
+    req: Stage1DeliverableRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    x_provider_key: Optional[str] = Header(None, alias="X-Provider-Key"),
+):
     """
     Stage 1: Contextual tools for architecture diagrams, workflows, tech-stack recommendations,
     implementation plans, database/API design, and pitch deck content.
     """
     from app.llm.stage_services import generate_stage1_deliverable
     try:
+        effective_key = resolve_user_provider_key(user, req.provider or "groq", req.api_key or x_provider_key)
         return generate_stage1_deliverable(
             deliverable_type=req.deliverable_type,
             context=req.context,
             conversation_notes=req.conversation_notes,
             provider=req.provider or "groq",
             model=req.model,
-            custom_key=req.api_key
+            custom_key=effective_key
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Deliverable generation failed: {str(e)}")

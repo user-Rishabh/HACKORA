@@ -227,21 +227,19 @@ export function setActiveProjectId(id: string | null): void {
 }
 
 // ------------------------------------------------------------------------------
-// Provider Credentials Operations (Persistent & Session Storage)
+// In-Memory Transient Provider Credentials (Never persisted to disk / localStorage)
 // ------------------------------------------------------------------------------
 
+let inMemoryCredentials: Record<string, ProviderCredential> = {};
+
+// Clean any legacy insecure localStorage / sessionStorage items immediately
+try {
+  localStorage.removeItem(STORAGE_KEY_PROVIDERS);
+  sessionStorage.removeItem(STORAGE_KEY_PROVIDERS);
+} catch {}
+
 export function getSavedCredentials(): Record<string, ProviderCredential> {
-  try {
-    // Check localStorage first so user credentials persist across refreshes, fallback to sessionStorage
-    let raw = localStorage.getItem(STORAGE_KEY_PROVIDERS);
-    if (!raw) {
-      raw = sessionStorage.getItem(STORAGE_KEY_PROVIDERS);
-    }
-    if (!raw) return {};
-    return JSON.parse(raw) as Record<string, ProviderCredential>;
-  } catch {
-    return {};
-  }
+  return inMemoryCredentials;
 }
 
 export function saveProviderCredential(
@@ -249,39 +247,20 @@ export function saveProviderCredential(
   apiKey: string,
   defaultModel?: string
 ): void {
-  try {
-    const cleanedKey = sanitizeApiKey(apiKey);
-    if (!cleanedKey) return;
+  const cleanedKey = sanitizeApiKey(apiKey);
+  if (!cleanedKey) return;
 
-    const credentials = getSavedCredentials();
-    credentials[provider.toLowerCase()] = {
-      apiKey: cleanedKey,
-      defaultModel,
-      validatedAt: Date.now(),
-    };
-
-    const serialized = JSON.stringify(credentials);
-    // Store in both localStorage (persists across page reloads) and sessionStorage
-    localStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
-    sessionStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
-  } catch (e) {
-    console.error('Failed to save provider credential:', e);
-  }
+  inMemoryCredentials[provider.toLowerCase()] = {
+    apiKey: cleanedKey,
+    defaultModel,
+    validatedAt: Date.now(),
+  };
 }
 
 export function removeProviderCredential(provider: string): void {
-  try {
-    const credentials = getSavedCredentials();
-    delete credentials[provider.toLowerCase()];
-    const serialized = JSON.stringify(credentials);
-    localStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
-    sessionStorage.setItem(STORAGE_KEY_PROVIDERS, serialized);
-  } catch (e) {
-    console.error('Failed to remove provider credential:', e);
-  }
+  delete inMemoryCredentials[provider.toLowerCase()];
 }
 
 export function getProviderCredential(provider: string): ProviderCredential | null {
-  const credentials = getSavedCredentials();
-  return credentials[provider.toLowerCase()] || null;
+  return inMemoryCredentials[provider.toLowerCase()] || null;
 }

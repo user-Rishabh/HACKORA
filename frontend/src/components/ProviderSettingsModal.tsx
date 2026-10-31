@@ -15,12 +15,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { API_BASE_URL } from '../lib/apiClient';
-import {
-  getSavedCredentials,
-  saveProviderCredential,
-  removeProviderCredential,
-  sanitizeApiKey,
-} from '../lib/projectStore';
+import { useAuth } from '../context/AuthContext';
+import { sanitizeApiKey } from '../lib/projectStore';
 
 interface ProviderSettingsModalProps {
   isOpen: boolean;
@@ -37,6 +33,14 @@ interface ProviderMeta {
   has_server_key: boolean;
   default_model: string;
   models: { id: string; name: string; context_window?: number }[];
+}
+
+interface StoredCredential {
+  provider: string;
+  status: string;
+  masked_key: string;
+  default_model?: string;
+  expires_in?: number;
 }
 
 const PROVIDER_PORTALS: Record<string, { url: string; label: string; prefixHint: string }> = {
@@ -79,17 +83,28 @@ export default function ProviderSettingsModal({
   activeModel,
   onSelectProviderModel,
 }: ProviderSettingsModalProps) {
+  const { token } = useAuth();
   const [providers, setProviders] = useState<ProviderMeta[]>([]);
+  const [serverCredentials, setServerCredentials] = useState<Record<string, StoredCredential>>({});
   const [selectedProviderId, setSelectedProviderId] = useState<string>(activeProvider || 'groq');
   const [apiKeyInput, setApiKeyInput] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>(activeModel || '');
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
 
   const [isValidating, setIsValidating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; message: string } | null>(null);
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
 
-  // Load providers from backend
+  // Clear any legacy insecure localStorage keys
+  useEffect(() => {
+    try {
+      localStorage.removeItem('devlens_ai_provider_credentials');
+      sessionStorage.removeItem('devlens_ai_provider_credentials');
+    } catch {}
+  }, []);
+
+  // Fetch supported providers
   const loadProviders = async () => {
     setIsLoadingProviders(true);
     try {
@@ -105,32 +120,54 @@ export default function ProviderSettingsModal({
     }
   };
 
+  // Fetch temporarily stored credentials for authenticated session
+  const loadCredentials = async () => {
+    if (!token) return;
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/credentials`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const map: Record<string, StoredCredential> = {};
+        (data.credentials || []).forEach((c: any) => {
+          map[c.provider.toLowerCase()] = {
+            provider: c.provider,
+            status: c.status,
+            masked_key: c.masked_key || c.key_preview || '',
+            default_model: c.default_model,
+            expires_in: c.expires_in,
+          };
+        });
+        setServerCredentials(map);
+      }
+    } catch (e) {
+      console.error('Failed to load stored credentials:', e);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       loadProviders();
-      const saved = getSavedCredentials();
-      const cred = saved[selectedProviderId];
-      if (cred?.apiKey) {
-        setApiKeyInput(cred.apiKey);
-      } else {
-        setApiKeyInput('');
-      }
+      loadCredentials();
+      setApiKeyInput('');
       setValidationResult(null);
     }
-  }, [isOpen, selectedProviderId]);
+  }, [isOpen, token]);
 
   useEffect(() => {
     const p = providers.find((pr) => pr.id === selectedProviderId);
     if (p) {
-      const saved = getSavedCredentials();
-      const cred = saved[selectedProviderId];
-      if (cred?.defaultModel) {
-        setSelectedModel(cred.defaultModel);
+      const stored = serverCredentials[selectedProviderId];
+      if (stored?.default_model) {
+        setSelectedModel(stored.default_model);
       } else if (!selectedModel || !p.models.some((m) => m.id === selectedModel)) {
         setSelectedModel(p.default_model);
       }
     }
-  }, [selectedProviderId, providers]);
+  }, [selectedProviderId, providers, serverCredentials]);
 
   if (!isOpen) return null;
 
@@ -139,7 +176,7 @@ export default function ProviderSettingsModal({
     name: selectedProviderId.toUpperCase(),
     description: '',
     has_server_key: false,
-    default_model: '',
+    default_model: selectedProviderId === 'groq' ? 'llama-3.1-8b-instant' : '',
     models: [],
   };
 
@@ -149,12 +186,12 @@ export default function ProviderSettingsModal({
     prefixHint: '',
   };
 
-  const savedCred = getSavedCredentials()[selectedProviderId];
-  const hasConfiguredKey = Boolean(apiKeyInput.trim() || savedCred?.apiKey || currentProvider.has_server_key);
+  const storedCred = serverCredentials[selectedProviderId];
+  const hasConfiguredKey = Boolean(apiKeyInput.trim() || storedCred?.masked_key || currentProvider.has_server_key);
 
   const handleValidateKey = async () => {
-    const keyToValidate = sanitizeApiKey(apiKeyInput) || savedCred?.apiKey || '';
-    if (!keyToValidate && !currentProvider.has_server_key) {
+    const keyToValidate = sanitizeApiKey(apiKeyInput);
+    if (!keyToValidate && !storedCred?.masked_key && !currentProvider.has_server_key) {
       setValidationResult({
         valid: false,
         message: `Please enter your ${currentProvider.name} API key below.`,
@@ -166,9 +203,12 @@ export default function ProviderSettingsModal({
     setValidationResult(null);
 
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/llm/validate`, {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const resp = await fetch(`${API_BASE_URL}/api/credentials/validate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           provider: selectedProviderId,
           api_key: keyToValidate || undefined,
@@ -178,192 +218,264 @@ export default function ProviderSettingsModal({
       const data = await resp.json();
       setValidationResult({
         valid: data.valid,
-        message: data.message,
+        message: data.message || (data.valid ? 'API key verified successfully.' : 'Validation failed.'),
       });
 
-      if (data.valid && keyToValidate) {
-        saveProviderCredential(selectedProviderId, keyToValidate, selectedModel);
+      // If valid and a key was entered, store it on the server
+      if (data.valid && keyToValidate && token) {
+        await saveCredentialToServer(keyToValidate);
       }
     } catch (e: any) {
-      // If testing fails due to local sandbox network isolation or timeout, save the key and defer connection to chat
       setValidationResult({
         valid: true,
-        message: `Key saved locally. Connection to ${currentProvider.name} will be established when you use the chat.`,
+        message: `Key formatted. Connection to ${currentProvider.name} will be active when you chat.`,
       });
-      if (keyToValidate) {
-        saveProviderCredential(selectedProviderId, keyToValidate, selectedModel);
-      }
     } finally {
       setIsValidating(false);
     }
   };
 
-  const handleSaveAndApply = () => {
+  const saveCredentialToServer = async (key: string) => {
+    if (!token) return;
+    setIsSaving(true);
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/credentials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          provider: selectedProviderId,
+          api_key: key,
+          default_model: selectedModel || currentProvider.default_model,
+        }),
+      });
+
+      if (resp.ok) {
+        const savedData = await resp.json();
+        setServerCredentials((prev) => ({
+          ...prev,
+          [selectedProviderId]: {
+            provider: savedData.provider,
+            status: savedData.status,
+            masked_key: savedData.masked_key,
+            default_model: savedData.model,
+            expires_in: savedData.expires_in,
+          },
+        }));
+        setApiKeyInput('');
+      } else {
+        const err = await resp.json().catch(() => ({}));
+        setValidationResult({
+          valid: false,
+          message: err.detail || 'Failed to save credential to server.',
+        });
+      }
+    } catch (err: any) {
+      console.error('Error saving credential:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveAndApply = async () => {
     const cleaned = sanitizeApiKey(apiKeyInput);
-    if (cleaned) {
-      saveProviderCredential(selectedProviderId, cleaned, selectedModel);
-    } else if (savedCred?.apiKey && selectedModel) {
-      saveProviderCredential(selectedProviderId, savedCred.apiKey, selectedModel);
+    if (cleaned && token) {
+      await saveCredentialToServer(cleaned);
     }
     const targetModel = selectedModel || currentProvider.default_model;
     onSelectProviderModel(selectedProviderId, targetModel);
     onClose();
   };
 
-  const handleRemoveKey = () => {
-    removeProviderCredential(selectedProviderId);
-    setApiKeyInput('');
-    setValidationResult({
-      valid: false,
-      message: 'Credential removed from storage.',
-    });
+  const handleRemoveKey = async () => {
+    if (!token) return;
+    try {
+      await fetch(`${API_BASE_URL}/api/credentials/${selectedProviderId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setServerCredentials((prev) => {
+        const copy = { ...prev };
+        delete copy[selectedProviderId];
+        return copy;
+      });
+      setApiKeyInput('');
+      setValidationResult({
+        valid: false,
+        message: `${currentProvider.name} credentials removed from server session.`,
+      });
+    } catch (e) {
+      console.error('Failed to delete credential:', e);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-[#1A1D29]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border border-[#E5E1DA] shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden max-h-[92vh] animate-fade-in">
-        {/* Modal Header */}
-        <div className="p-5 border-b border-[#E5E1DA] flex items-center justify-between bg-[#FAFAF7]">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-[#E5E1DA] overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="p-4 border-b border-[#E5E1DA] flex items-center justify-between bg-[#FAFAF7]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#E85D2C]/10 border border-[#E85D2C]/20 flex items-center justify-center text-[#E85D2C]">
-              <KeyRound className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-[#E85D2C]/10 flex items-center justify-center">
+              <KeyRound className="w-4 h-4 text-[#E85D2C]" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-base text-[#1A1D29]">
-                AI Provider & API Key Settings
-              </h3>
-              <p className="text-[11px] font-mono text-[#6B7280]">
+              <h2 className="text-sm font-bold text-[#1A1D29] font-mono">AI Provider & API Key Settings</h2>
+              <p className="text-[11px] text-[#6B7280]">
                 Bring Your Own Key (BYOK). Keys connect to models only when you send a message in chat.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-[#E5E1DA] text-[#6B7280] hover:text-[#1A1D29] hover:bg-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#1A1D29] hover:bg-[#E5E1DA]/50 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-12 min-h-[400px]">
-          {/* Provider List Sidebar (4 cols) */}
-          <div className="md:col-span-4 border-r border-[#E5E1DA] p-3 flex flex-col gap-1.5 bg-[#FAFAF7]/60">
-            <span className="text-[10px] font-mono uppercase font-bold text-[#6B7280] px-2 py-1">
+        {/* Content Body: Two Columns */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Provider Sidebar */}
+          <div className="w-48 border-r border-[#E5E1DA] bg-[#FAFAF7]/50 p-2.5 space-y-1 overflow-y-auto">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#6B7280] px-2 py-1">
               Select Provider
-            </span>
+            </div>
             {providers.map((p) => {
               const isSelected = p.id === selectedProviderId;
-              const hasKey = p.has_server_key || Boolean(getSavedCredentials()[p.id]?.apiKey);
+              const hasKey = p.has_server_key || Boolean(serverCredentials[p.id]?.masked_key);
+
               return (
                 <button
                   key={p.id}
                   onClick={() => {
                     setSelectedProviderId(p.id);
+                    setApiKeyInput('');
+                    setValidationResult(null);
                   }}
-                  className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                  className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
                     isSelected
-                      ? 'border-[#E85D2C] bg-white shadow-xs text-[#E85D2C]'
-                      : 'border-transparent hover:border-[#E5E1DA] hover:bg-white text-[#1A1D29]'
+                      ? 'bg-white border border-[#E85D2C] shadow-2xs text-[#1A1D29]'
+                      : 'hover:bg-white/80 border border-transparent text-[#4A5568]'
                   }`}
                 >
-                  <div>
-                    <div className="text-xs font-bold font-mono">{p.name}</div>
-                    <div className="text-[10px] text-[#6B7280] truncate max-w-[130px]">
-                      {p.description}
-                    </div>
+                  <div className="truncate">
+                    <div className="text-xs font-semibold font-mono truncate">{p.name}</div>
+                    <div className="text-[10px] text-[#6B7280] truncate">{p.description}</div>
                   </div>
                   {hasKey && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Key Configured" />
+                    <div className="w-2 h-2 rounded-full bg-[#059669] shrink-0 ml-1.5" title="Connected" />
                   )}
                 </button>
               );
             })}
           </div>
 
-          {/* Provider Configuration Panel (8 cols) */}
-          <div className="md:col-span-8 p-5 flex flex-col justify-between gap-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E5E1DA] pb-2.5">
-                <div>
-                  <h4 className="font-display font-bold text-sm text-[#1A1D29]">
-                    {currentProvider.name} Credentials
-                  </h4>
-                  <p className="text-xs font-mono text-[#6B7280]">
-                    {currentProvider.description}
-                  </p>
-                </div>
-                {savedCred?.apiKey ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shrink-0">
+          {/* Right Column: Settings Form */}
+          <div className="flex-1 p-5 overflow-y-auto space-y-5">
+            {/* Provider Title & Connection Badge */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-[#1A1D29] font-mono flex items-center gap-2">
+                  <span>{currentProvider.name} Credentials</span>
+                  {currentProvider.id === 'groq' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-100 text-amber-800">
+                      High Speed LPU
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-[#6B7280] mt-0.5">{currentProvider.description}</p>
+              </div>
+
+              <div>
+                {storedCred?.masked_key ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     Key Saved & Ready
                   </span>
                 ) : currentProvider.has_server_key ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-50 text-blue-700 border border-blue-200 font-semibold shrink-0">
-                    Server Key
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                    Default Server Key
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold shrink-0">
-                    Key Required
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    Not Configured
                   </span>
                 )}
               </div>
+            </div>
 
-              {/* API Key Input Section with Prompt */}
-              <div className="space-y-2 p-3.5 rounded-xl bg-[#FFF4EE]/40 border border-[#E85D2C]/20">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-mono font-bold text-[#1A1D29] flex items-center gap-1.5">
+            {/* Validation Banner */}
+            {validationResult && (
+              <div
+                className={`p-3 rounded-xl border text-xs font-mono flex items-start gap-2.5 ${
+                  validationResult.valid
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
+                }`}
+              >
+                {validationResult.valid ? (
+                  <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <div className="font-bold">{validationResult.valid ? 'Verified' : 'Validation Error'}</div>
+                  <div className="text-[11px] mt-0.5">{validationResult.message}</div>
+                </div>
+              </div>
+            )}
+
+            {/* API Key Input Section */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <label className="font-bold text-[#1A1D29] flex items-center gap-1.5">
                     <KeyRound className="w-3.5 h-3.5 text-[#E85D2C]" />
                     <span>Enter your {currentProvider.name} API Key</span>
                   </label>
-                  <a
-                    href={portalInfo.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] font-mono text-[#E85D2C] hover:underline flex items-center gap-1"
-                  >
-                    <span>Get Key</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  {portalInfo.url !== '#' && (
+                    <a
+                      href={portalInfo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#E85D2C] hover:underline flex items-center gap-1 text-[11px]"
+                    >
+                      <span>Get Key</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
 
                 <div className="relative">
                   <input
                     type={showApiKey ? 'text' : 'password'}
                     value={apiKeyInput}
-                    onChange={(e) => {
-                      setApiKeyInput(e.target.value);
-                      setValidationResult(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSaveAndApply();
-                      }
-                    }}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
                     placeholder={
-                      savedCred?.apiKey
-                        ? 'Key saved. Paste a new key here to replace it...'
-                        : currentProvider.has_server_key
-                          ? 'Server key available. Paste custom key here to override...'
-                          : `Paste your ${currentProvider.name} API key (${portalInfo.prefixHint})...`
+                      storedCred?.masked_key
+                        ? `Stored: ${storedCred.masked_key} (Paste new key to replace)`
+                        : portalInfo.prefixHint || 'Paste your private API key here...'
                     }
-                    className="w-full p-2.5 rounded-xl border border-[#E5E1DA] bg-white text-xs font-mono text-[#1A1D29] focus:outline-none focus:border-[#E85D2C] pr-16"
+                    className="w-full p-2.5 pr-20 rounded-xl border border-[#E5E1DA] bg-white text-xs font-mono text-[#1A1D29] placeholder-[#9CA3AF] focus:outline-none focus:border-[#E85D2C]"
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <div className="absolute right-2 top-2 flex items-center gap-1 text-[#6B7280]">
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="p-1 text-[#6B7280] hover:text-[#1A1D29] transition-colors cursor-pointer"
-                      title={showApiKey ? 'Hide key' : 'Show key'}
+                      className="p-1 hover:text-[#1A1D29] transition-colors cursor-pointer"
+                      title={showApiKey ? 'Hide Key' : 'Show Key'}
                     >
                       {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
-                    {(apiKeyInput || savedCred?.apiKey) && (
+                    {(apiKeyInput || storedCred?.masked_key) && (
                       <button
                         type="button"
                         onClick={handleRemoveKey}
-                        className="p-1 text-[#6B7280] hover:text-red-600 transition-colors cursor-pointer"
-                        title="Clear key"
+                        className="p-1 text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                        title="Remove stored key"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -371,31 +483,13 @@ export default function ProviderSettingsModal({
                   </div>
                 </div>
 
-                <div className="text-[10px] font-mono text-[#6B7280] flex items-center justify-between">
-                  <span>Portal: <a href={portalInfo.url} target="_blank" rel="noreferrer" className="text-[#1A1D29] font-semibold hover:underline">{portalInfo.label}</a></span>
-                  {savedCred?.apiKey && !apiKeyInput && (
-                    <span className="text-emerald-600 font-semibold">Active: {savedCred.apiKey.slice(0, 4)}••••••••{savedCred.apiKey.slice(-4)}</span>
+                <div className="flex items-center justify-between text-[10px] font-mono text-[#6B7280]">
+                  <span>Portal: {portalInfo.label}</span>
+                  {storedCred?.masked_key && !apiKeyInput && (
+                    <span className="text-emerald-600 font-semibold">Active: {storedCred.masked_key}</span>
                   )}
                 </div>
               </div>
-
-              {/* Validation Status message */}
-              {validationResult && (
-                <div
-                  className={`p-3 rounded-xl border text-xs font-mono flex items-start gap-2 ${
-                    validationResult.valid
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                      : 'bg-red-50 border-red-200 text-red-700'
-                  }`}
-                >
-                  {validationResult.valid ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                  )}
-                  <span>{validationResult.message}</span>
-                </div>
-              )}
 
               {/* Model Selection Dropdown */}
               <div className="space-y-1.5">
@@ -420,7 +514,7 @@ export default function ProviderSettingsModal({
               <div className="p-3 rounded-xl bg-[#FAFAF7] border border-[#E5E1DA] text-[10px] font-mono text-[#6B7280] flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#059669] shrink-0 mt-0.5" />
                 <span>
-                  Keys are saved securely in your browser and are passed directly to backend inference requests only when you use the chat. Keys are never logged or stored in server files.
+                  Keys are temporarily stored in server memory with user and session isolation and automatic 1-hour TTL. Plaintext keys are never stored in databases or local browser storage and are wiped immediately upon logout.
                 </span>
               </div>
             </div>
@@ -430,7 +524,7 @@ export default function ProviderSettingsModal({
               <button
                 type="button"
                 onClick={handleValidateKey}
-                disabled={isValidating}
+                disabled={isValidating || isSaving}
                 className="px-3.5 py-2 rounded-xl border border-[#E5E1DA] hover:border-[#1A1D29] bg-white text-xs font-mono font-semibold text-[#1A1D29] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isValidating ? (
@@ -457,9 +551,11 @@ export default function ProviderSettingsModal({
                 <button
                   type="button"
                   onClick={handleSaveAndApply}
-                  className="px-4 py-2 rounded-xl bg-[#E85D2C] hover:bg-[#D45022] text-white text-xs font-mono font-semibold transition-all shadow-xs cursor-pointer"
+                  disabled={isSaving}
+                  className="px-4 py-2 rounded-xl bg-[#E85D2C] hover:bg-[#D45022] text-white text-xs font-mono font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
-                  Save & Apply
+                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Save & Apply</span>
                 </button>
               </div>
             </div>

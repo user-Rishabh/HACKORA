@@ -39,7 +39,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ExternalLink,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../lib/apiClient';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import {
@@ -417,24 +419,25 @@ export default function AIWorkspaceChat({
   const [isGenerating, setIsGenerating] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
-  const isDeprecatedOrRestricted = (m?: string) => {
-    if (!m) return true;
-    return ['llama-3.3-70b-versatile', 'gemma2-9b-it', 'mixtral-8x7b-32768', 'llama3-70b-8192', 'llama3-8b-8192'].includes(m);
+  const { token, user, signOut } = useAuth();
+
+  const isDecommissionedModel = (m?: string) => {
+    if (!m) return false;
+    return ['gemma2-9b-it', 'gemma-7b-it'].includes(m);
   };
 
   // Model & Provider settings
   const [provider, setProvider] = useState<string>(() => project?.provider || 'groq');
   const [model, setModel] = useState<string>(() => {
-    if (isDeprecatedOrRestricted(project?.model)) return 'openai/gpt-oss-120b';
-    return project?.model || 'openai/gpt-oss-120b';
+    if (isDecommissionedModel(project?.model)) return 'llama-3.1-8b-instant';
+    return project?.model || (project?.provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.1-8b-instant');
   });
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [credentialsVersion, setCredentialsVersion] = useState(0);
 
-  const currentCred = getProviderCredential(provider);
-  const hasActiveKey = Boolean(currentCred?.apiKey);
+  const hasActiveKey = Boolean(token);
 
   // Sidebar and Tools panel states
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -469,7 +472,7 @@ export default function AIWorkspaceChat({
       setDeliverableData(p.deliverables || {});
       if (p.provider) setProvider(p.provider);
       if (p.model) {
-        setModel(isDeprecatedOrRestricted(p.model) ? 'openai/gpt-oss-120b' : p.model);
+        setModel(isDecommissionedModel(p.model) ? 'llama-3.1-8b-instant' : p.model);
       }
       if (p.mode) setWorkspaceMode(p.mode);
       setActiveProjectId(activeId);
@@ -480,9 +483,10 @@ export default function AIWorkspaceChat({
   // Fetch available models for current provider
   const fetchModels = useCallback(async (prov: string) => {
     try {
-      const cred = getProviderCredential(prov);
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API_BASE_URL}/api/llm/models?provider=${prov}`, {
-        headers: cred?.apiKey ? { 'X-Provider-Key': cred.apiKey } : {},
+        headers,
       });
       if (res.ok) {
         const data = await res.json();
@@ -721,12 +725,7 @@ export default function AIWorkspaceChat({
       attachedFiles: [...(project?.attachedFiles || []), ...uniqueAttachments],
     });
 
-    const cred = getProviderCredential(provider);
-    if (!cred?.apiKey) {
-      setChatError(`Please enter your ${provider.toUpperCase()} API key in Provider Settings before sending a message. HACKORA connects to the AI provider only when you use the chat.`);
-      setIsSettingsOpen(true);
-      return;
-    }
+    // Server resolves credentials securely from user session or server configuration
 
     setIsGenerating(true);
     const controller = new AbortController();
@@ -742,13 +741,12 @@ export default function AIWorkspaceChat({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Provider-Key': cred.apiKey,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             problem_statement: cumulativeProblemText.slice(0, 6000),
             provider,
             model,
-            api_key: cred.apiKey,
           }),
           signal: controller.signal,
         });
@@ -813,7 +811,7 @@ export default function AIWorkspaceChat({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(cred?.apiKey ? { 'X-Provider-Key': cred.apiKey } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           provider,
@@ -822,7 +820,6 @@ export default function AIWorkspaceChat({
           context: getContextString(),
           system_prompt:
             'You are HACKORA, an elite hackathon mentor and technical architect. Converse naturally like ChatGPT and Claude. Format all responses in clean, rich GitHub Markdown using clear headings (## and ###), bullet points, and code blocks. Never output raw JSON dictionaries or robotic code objects unless specifically asked.',
-          api_key: cred?.apiKey,
         }),
         signal: controller.signal,
       });
@@ -891,14 +888,13 @@ export default function AIWorkspaceChat({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(cred?.apiKey ? { 'X-Provider-Key': cred.apiKey } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
             context: getContextString(),
             provider,
             model,
-            api_key: cred?.apiKey,
           }),
         });
         if (nonStreamRes.ok) {
@@ -958,14 +954,6 @@ export default function AIWorkspaceChat({
     setIsGeneratingDeliverable(true);
     setDeliverableError(null);
 
-    const cred = getProviderCredential(provider);
-    if (!cred?.apiKey) {
-      setDeliverableError(`Please enter your ${provider.toUpperCase()} API key in Provider Settings to generate blueprints.`);
-      setIsGeneratingDeliverable(false);
-      setIsSettingsOpen(true);
-      return;
-    }
-
     const contextStr = getContextString();
     const conversationNotes = messages
       .slice(-6)
@@ -977,7 +965,7 @@ export default function AIWorkspaceChat({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(cred?.apiKey ? { 'X-Provider-Key': cred.apiKey } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           deliverable_type: type,
@@ -985,7 +973,6 @@ export default function AIWorkspaceChat({
           conversation_notes: conversationNotes,
           provider,
           model,
-          api_key: cred?.apiKey,
         }),
       });
 
@@ -1288,6 +1275,26 @@ export default function AIWorkspaceChat({
               <Layers className="w-4 h-4" />
               <span className="hidden sm:inline">Tools</span>
             </button>
+
+            {/* Authenticated User Pill & Sign Out */}
+            {user && (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-[#E5E1DA]">
+                <div
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-[#E5E1DA] text-[11px] font-mono text-[#4A5568]"
+                  title={user.email}
+                >
+                  <User className="w-3 h-3 text-[#E85D2C] shrink-0" />
+                  <span className="max-w-[120px] truncate">{user.email}</span>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="p-1.5 rounded-xl border border-[#E5E1DA] hover:border-red-300 hover:bg-red-50 text-[#6B7280] hover:text-red-600 transition-colors cursor-pointer"
+                  title="Sign Out of HACKORA"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </header>
 

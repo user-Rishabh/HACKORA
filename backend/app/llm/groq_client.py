@@ -7,11 +7,11 @@ from groq import Groq, RateLimitError
 _RESOLVED_GROQ_MODEL: str | None = None
 
 DEFAULT_FALLBACK_MODELS = [
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
-    "qwen/qwen3.6-27b",
     "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
     "llama3-70b-8192",
+    "llama3-8b-8192",
     "mixtral-8x7b-32768",
 ]
 
@@ -20,9 +20,9 @@ def get_preferred_groq_model() -> str:
     if _RESOLVED_GROQ_MODEL:
         return _RESOLVED_GROQ_MODEL
     env_model = os.getenv("GROQ_MODEL")
-    if env_model and env_model.strip() and env_model.strip() != "llama-3.3-70b-versatile":
+    if env_model and env_model.strip():
         return env_model.strip()
-    return "openai/gpt-oss-120b"
+    return "llama-3.1-8b-instant"
 
 def execute_groq_chat_completion(
     client: Groq,
