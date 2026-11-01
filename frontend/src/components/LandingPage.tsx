@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { 
   GitBranch, 
   ArrowRight, 
@@ -37,8 +37,6 @@ interface LandingPageProps {
   isLoading: boolean;
   loadingPhase: string;
   error: string | null;
-  onBackToMain?: () => void;
-  onGoToStage1?: () => void;
 }
 
 // Hook for Animated Count-up Stats
@@ -72,9 +70,7 @@ export default function LandingPage({
   handleAnalyze,
   isLoading,
   loadingPhase,
-  error,
-  onBackToMain,
-  onGoToStage1,
+  error
 }: LandingPageProps) {
   // 1. Mouse Parallax State for Hero Graph Background
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
@@ -145,47 +141,32 @@ export default function LandingPage({
     <div className="min-h-screen bg-[#FAFAF7] text-[#1A1D29] flex flex-col justify-between selection:bg-[#F4A688]/40 selection:text-[#1A1D29] font-sans relative overflow-hidden">
       
       {/* ------------------- HEADER / NAV BAR ------------------- */}
-      <header className="w-full max-w-7xl mx-auto px-6 py-4 flex items-center justify-between z-20 border-b border-[#E5E1DA] bg-white/80 backdrop-blur-md rounded-2xl mt-4 shadow-2xs">
+      <header className="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
-          {onBackToMain && (
-            <button
-              onClick={onBackToMain}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#E5E1DA] hover:border-[#1A1D29] bg-white text-xs font-mono text-[#6B7280] hover:text-[#1A1D29] transition-all cursor-pointer shadow-2xs mr-1"
-              title="Return to Main Workspace"
-            >
-              <ArrowRight className="w-3.5 h-3.5 rotate-180" />
-              <span>Workspace</span>
-            </button>
-          )}
-          <div className="p-2 bg-[#3B5FE0]/10 border border-[#3B5FE0]/25 rounded-xl text-[#3B5FE0] flex items-center justify-center shadow-xs">
-            <Navigation className="w-4 h-4 fill-[#3B5FE0]/15" />
+          <div className="p-2.5 bg-[#E85D2C]/10 border border-[#E85D2C]/25 rounded-xl text-[#E85D2C] flex items-center justify-center shadow-xs">
+            <Navigation className="w-5 h-5 fill-[#E85D2C]/15" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-display font-extrabold text-base tracking-tight text-[#1A1D29]">HACKORA</span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#3B5FE0]/10 border border-[#3B5FE0]/25 text-[#3B5FE0]">
-                Stage 2
+              <span className="font-display font-extrabold text-lg tracking-tight text-[#1A1D29]">DevLens <span className="text-[#E85D2C]">AI</span></span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#E5E1DA]/70 border border-[#E5E1DA] text-[#6B7280]">
+                v0.3.0
               </span>
             </div>
-            <p className="text-[11px] font-mono text-[#6B7280]">Analyze & Defend</p>
+            <p className="text-[11px] font-mono text-[#6B7280]">Google Maps for Codebases</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-mono text-[#6B7280]">
-          {onGoToStage1 && (
-            <button
-              onClick={onGoToStage1}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E85D2C]/40 bg-[#E85D2C]/10 hover:bg-[#E85D2C] text-[#E85D2C] hover:text-white transition-all duration-150 cursor-pointer shadow-2xs font-semibold"
-            >
-              <span>Stage 1 — Explore & Plan</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          )}
+        <div className="hidden sm:flex items-center gap-6 text-xs font-mono text-[#6B7280]">
+          <a href="#stats" className="hover:text-[#1A1D29] transition-colors">Telemetry</a>
+          <a href="#waypoints" className="hover:text-[#1A1D29] transition-colors">Waypoints</a>
+          <a href="#features" className="hover:text-[#1A1D29] transition-colors">Legend</a>
+          <a href="#underthehood" className="hover:text-[#1A1D29] transition-colors">Under The Hood</a>
           <a 
             href="https://github.com/user-Rishabh/DevLens-AI" 
             target="_blank" 
             rel="noreferrer"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#E5E1DA] hover:border-[#1A1D29] text-[#1A1D29] shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#E5E1DA] hover:border-[#E85D2C]/40 text-[#1A1D29] shadow-xs transition-all cursor-pointer"
           >
             <Github className="w-3.5 h-3.5 text-[#1A1D29]" />
             GitHub
@@ -465,12 +446,12 @@ export default function LandingPage({
           <div className="text-left font-mono">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#1A1D29]">12 files</span>
-              <span className="text-[10px] text-[#6B7280]">·</span>
+              <span className="text-[10px] text-[#6B7280]">┬╖</span>
               <span className="text-xs font-semibold text-[#E85D2C]">3 hops</span>
             </div>
             <div className="text-[10px] text-[#6B7280] flex items-center gap-1 mt-0.5">
               <Zap className="w-3 h-3 text-[#3B5FE0]" />
-              <span>Analyzed in 2.1s · AST route</span>
+              <span>Analyzed in 2.1s ┬╖ AST route</span>
             </div>
           </div>
         </div>
@@ -485,7 +466,7 @@ export default function LandingPage({
               +
             </div>
             <div className="w-8 h-8 flex items-center justify-center text-[#4B5563] text-base font-semibold leading-none">
-              −
+              ΓêÆ
             </div>
           </div>
         </div>
@@ -509,27 +490,27 @@ export default function LandingPage({
               </div>
             </div>
 
-            {/* Stage 2 Status Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E5E1DA] text-[#3B5FE0] text-xs font-mono shadow-xs">
+            {/* Route Status Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E5E1DA] text-[#E85D2C] text-xs font-mono shadow-xs">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3B5FE0] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3B5FE0]"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E85D2C] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E85D2C]"></span>
               </span>
-              <span className="font-semibold tracking-wider uppercase">Stage 2 — Analyze & Defend</span>
+              <span className="font-semibold tracking-wider">NAVIGATION ROUTE CALCULATED</span>
             </div>
           </div>
 
           {/* Headline (Display Face: Space Grotesk) */}
           <h1 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl tracking-tight text-[#1A1D29] leading-[1.08] mb-6">
-            Understand your code, <br />
-            <span className="text-[#3B5FE0]">
-              defend your project.
+            Google Maps for <br />
+            <span className="text-[#E85D2C]">
+              your codebase.
             </span>
           </h1>
 
           {/* Subheadline (Body Face: Inter) */}
           <p className="text-base sm:text-lg text-[#6B7280] max-w-2xl leading-relaxed mb-10 font-normal">
-            Understand your existing codebase, verify what your project implements, and prepare to explain your technical decisions with verifiable code evidence.
+            Calculate impact paths, trace dependency blast radius, and navigate unfamiliar repositories before touching a single line of code.
           </p>
 
           {/* Error Alert Box */}
@@ -565,11 +546,11 @@ export default function LandingPage({
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    Analyzing Codebase...
+                    Analyzing Route...
                   </>
                 ) : (
                   <>
-                    Analyze & Defend
+                    Calculate Route
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -595,7 +576,7 @@ export default function LandingPage({
             >
               octocat/Spoon-Knife
             </button>
-            <span>•</span>
+            <span>ΓÇó</span>
             <button 
               type="button"
               onClick={() => setRepoUrl('https://github.com/user-Rishabh/DevLens-AI')}
@@ -617,7 +598,7 @@ export default function LandingPage({
               <span>{countLanguages}</span>
               <span className="text-xs text-[#6B7280] font-sans font-normal">Languages</span>
             </div>
-            <p className="text-[11px] font-mono text-[#6B7280] mt-1">Python • TypeScript • JavaScript</p>
+            <p className="text-[11px] font-mono text-[#6B7280] mt-1">Python ΓÇó TypeScript ΓÇó JavaScript</p>
           </div>
 
           <div className="flex flex-col items-center justify-center reveal-on-scroll stagger-2">
@@ -652,7 +633,7 @@ export default function LandingPage({
           <div className="text-center max-w-xl mx-auto mb-16 reveal-on-scroll">
             <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">ROUTE WAYPOINTS</span>
             <h2 className="font-display text-2xl sm:text-4xl font-extrabold text-[#1A1D29] mt-2">
-              How You Navigate Code with HACKORA
+              How You Navigate Code with DevLens
             </h2>
             <p className="text-xs sm:text-sm text-[#6B7280] mt-2">
               From raw repository link to confident code changes in 4 simple stops.
@@ -678,7 +659,7 @@ export default function LandingPage({
                 </div>
                 <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Drop a GitHub URL</h3>
                 <p className="text-xs text-[#6B7280] leading-relaxed">
-                  Provide any public GitHub repository link. HACKORA clones the codebase into an isolated temporary environment with shallow history depth up to 100 commits without needing local Docker setup or API keys.
+                  Provide any public GitHub repository link. DevLens clones the codebase into an isolated temporary environment with shallow history depth up to 100 commits without needing local Docker setup or API keys.
                 </p>
               </div>
             </div>
@@ -694,7 +675,7 @@ export default function LandingPage({
                 </div>
                 <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">We Map Structure</h3>
                 <p className="text-xs text-[#6B7280] leading-relaxed">
-                  HACKORA parses internal imports across Python, JavaScript, and TypeScript source files while parsing git commit histories to construct a live 2D dependency graph and hotspot risk map.
+                  DevLens parses internal imports across Python, JavaScript, and TypeScript source files while parsing git commit histories to construct a live 2D dependency graph and hotspot risk map.
                 </p>
               </div>
             </div>
@@ -756,7 +737,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND — IMPACT ANALYSIS
+                  LEGEND ΓÇö IMPACT ANALYSIS
                 </span>
                 <div className="relative">
                   <span className="absolute inset-0 rounded-full bg-[#E85D2C] blast-ring opacity-0" />
@@ -765,7 +746,7 @@ export default function LandingPage({
               </div>
               <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Downstream Impact Analysis</h3>
               <p className="text-xs text-[#6B7280] leading-relaxed">
-                Calculates a reverse adjacency graph up to 3 levels deep. Identifies every direct dependent and transitive module that imports a target file, showing exact impact flow paths (e.g. <code className="text-[#E85D2C] font-mono text-[10px] bg-[#FAFAF7] px-1.5 py-0.5 rounded border border-[#E5E1DA]">auth.py → routes.py → App.tsx</code>) before you touch code.
+                Calculates a reverse adjacency graph up to 3 levels deep. Identifies every direct dependent and transitive module that imports a target file, showing exact impact flow paths (e.g. <code className="text-[#E85D2C] font-mono text-[10px] bg-[#FAFAF7] px-1.5 py-0.5 rounded border border-[#E5E1DA]">auth.py ΓåÆ routes.py ΓåÆ App.tsx</code>) before you touch code.
               </p>
             </div>
           </div>
@@ -775,7 +756,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND — ARCHITECTURE MAP
+                  LEGEND ΓÇö ARCHITECTURE MAP
                 </span>
                 {/* Mini interactive nodes that shift on hover */}
                 <div className="flex gap-1 items-center">
@@ -796,11 +777,11 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#3B5FE0] uppercase tracking-wider block">
-                  LEGEND — ASK HACKORA
+                  LEGEND ΓÇö ASK DEVLENS
                 </span>
                 <Sparkles className="w-4 h-4 text-[#3B5FE0] group-hover:scale-110 transition-transform" />
               </div>
-              <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Ask HACKORA (Semantic & RAG Search)</h3>
+              <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Ask DevLens (Semantic & RAG Search)</h3>
               <p className="text-xs text-[#6B7280] leading-relaxed">
                 Combines sparse keyword matching with dense sentence-transformer vector embeddings using Reciprocal Rank Fusion (RRF). Finds code whether searching by exact function name or by describing conceptual intent in natural language.
               </p>
@@ -817,7 +798,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND — AI SUMMARIES
+                  LEGEND ΓÇö AI SUMMARIES
                 </span>
                 <FileCode2 className="w-4 h-4 text-[#E85D2C] group-hover:scale-110 transition-transform" />
               </div>
@@ -833,7 +814,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND — ONBOARDING GUIDE
+                  LEGEND ΓÇö ONBOARDING GUIDE
                 </span>
                 <Compass className="w-4 h-4 text-[#E85D2C] compass-icon transition-transform duration-300" />
               </div>
@@ -849,7 +830,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#3B5FE0] uppercase tracking-wider block">
-                  LEGEND — CODE HEALTH
+                  LEGEND ΓÇö CODE HEALTH
                 </span>
                 <BarChart3 className="w-4 h-4 text-[#3B5FE0] group-hover:scale-110 transition-transform" />
               </div>
@@ -882,16 +863,16 @@ export default function LandingPage({
 
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1A1D29] text-white text-xs font-mono font-semibold tracking-wide shadow-xs border border-[#1A1D29]/20">
                 <Target className="w-3.5 h-3.5 text-[#E85D2C]" />
-                <span>Hybrid Search — 69.23% Recall@5</span>
+                <span>Hybrid Search ΓÇö 69.23% Recall@5</span>
               </div>
             </div>
 
-            <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">UNDER THE HOOD — TECHNICAL ARCHITECTURE</span>
+            <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">UNDER THE HOOD ΓÇö TECHNICAL ARCHITECTURE</span>
             <h2 className="font-display text-2xl sm:text-4xl font-extrabold text-[#1A1D29] mt-2">
               Designed for Engineering Rigor, Not Just LLM Wrappers
             </h2>
             <p className="text-xs sm:text-sm text-[#6B7280] mt-2 leading-relaxed">
-              HACKORA combines static AST analysis, vector similarity, and git history telemetry into a deterministic local graph engine.
+              DevLens AI combines static AST analysis, vector similarity, and git history telemetry into a deterministic local graph engine.
             </p>
           </div>
 
@@ -957,7 +938,7 @@ export default function LandingPage({
           <div className="text-center max-w-2xl mx-auto mb-10 reveal-on-scroll">
             <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">TECHNOLOGY STACK</span>
             <h2 className="font-display text-xl sm:text-3xl font-extrabold text-[#1A1D29] mt-2">
-              Built With HACKORA Engine Tech Stack
+              Built With DevLens AI Tech Stack
             </h2>
             <p className="text-xs text-[#6B7280] mt-2 leading-relaxed">
               Explore the engineering choices powering our codebase ingestion, AST analysis, and hybrid search pipelines.
@@ -1026,8 +1007,8 @@ export default function LandingPage({
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-[#E5E1DA] flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Navigation className="w-4 h-4 text-[#E85D2C]" />
-            <span className="font-display font-bold text-sm text-[#1A1D29]">HACKORA Engine</span>
-            <span className="text-xs font-mono text-[#6B7280]">© 2026</span>
+            <span className="font-display font-bold text-sm text-[#1A1D29]">DevLens AI Engine</span>
+            <span className="text-xs font-mono text-[#6B7280]">┬⌐ 2026</span>
           </div>
 
           <div className="flex items-center gap-6 text-xs font-mono text-[#6B7280]">

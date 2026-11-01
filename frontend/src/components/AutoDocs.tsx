@@ -221,7 +221,7 @@ export default function AutoDocs({ repoId, repoName }: AutoDocsProps) {
           <span className="text-xs text-indigo-400 font-mono font-medium uppercase tracking-wider">Module Synthesis</span>
           <h2 className="text-xl font-bold text-white mt-0.5">Auto-Generated Documentation</h2>
           <p className="text-xs text-zinc-400 mt-1 max-w-xl">
-            HACKORA synthesizes the cached explanations of your files, cross-references internal dependencies, and generates comprehensive, module-level README documents.
+            DevLens synthesizes the cached explanations of your files, cross-references internal dependencies, and generates comprehensive, module-level README documents.
           </p>
         </div>
 

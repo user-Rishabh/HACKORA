@@ -72,7 +72,7 @@ export default function FileExplainer({
 
     const fetchAllFileData = async () => {
       loadingRef.current = filePath;
-      console.log(`[HACKORA] Fetching explanation & blast radius for: "${filePath}"`);
+      console.log(`[DevLens] Fetching explanation & blast radius for: "${filePath}"`);
 
       setLoadingSummary(true);
       setLoadingBlast(true);

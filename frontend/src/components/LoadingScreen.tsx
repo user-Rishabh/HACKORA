@@ -342,7 +342,7 @@ export default function LoadingScreen({
         </div>
         <div>
           <span className="font-extrabold text-base tracking-tight text-[#1A1D29]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-            HACKORA
+            DevLens AI
           </span>
           <p className="text-[11px] text-[#6B7280]" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
             Calculating route...

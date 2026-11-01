@@ -146,10 +146,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialView = 'login', onSuc
       {/* Brand Header */}
       <div className="mb-8 text-center flex flex-col items-center">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#E85D2C] to-[#C7491C] flex items-center justify-center shadow-lg shadow-[#E85D2C]/20 mb-3">
-          <span className="text-white font-black text-2xl font-mono tracking-tighter">H</span>
+          <span className="text-white font-black text-lg font-mono tracking-tighter">DL</span>
         </div>
-        <h1 className="text-2xl font-extrabold text-[#1A1D29] tracking-tight font-display">HACKORA</h1>
-        <p className="text-xs text-[#71717A] mt-1 font-mono uppercase tracking-wider">AI Hackathon Companion</p>
+        <h1 className="text-2xl font-extrabold text-[#1A1D29] tracking-tight font-display">DevLens AI</h1>
+        <p className="text-xs text-[#71717A] mt-1 font-mono uppercase tracking-wider">Codebase Intelligence & Architecture Visualizer</p>
       </div>
 
       {/* Main Card */}
@@ -162,13 +162,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialView = 'login', onSuc
           {view === 'login' && (
             <>
               <h2 className="text-xl font-bold text-[#1A1D29]">Welcome Back</h2>
-              <p className="text-xs text-[#71717A] mt-1">Sign in to access your hackathon workspace and AI models</p>
+              <p className="text-xs text-[#71717A] mt-1">Sign in to access your codebase workspace and AI models</p>
             </>
           )}
           {view === 'signup' && (
             <>
               <h2 className="text-xl font-bold text-[#1A1D29]">Create Your Account</h2>
-              <p className="text-xs text-[#71717A] mt-1">Start planning, building, and defending your hackathon projects</p>
+              <p className="text-xs text-[#71717A] mt-1">Start analyzing, understanding, and navigating complex codebases</p>
             </>
           )}
           {view === 'forgot_password' && (
@@ -477,7 +477,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialView = 'login', onSuc
 
       {/* Footer Info */}
       <div className="mt-8 text-center text-[11px] text-[#A1A1AA]">
-        <span>HACKORA Bring Your Own Key (BYOK) Architecture. Powered by Supabase Auth.</span>
+        <span>DevLens AI Bring Your Own Key (BYOK) Architecture. Powered by Supabase Auth.</span>
       </div>
     </div>
   );

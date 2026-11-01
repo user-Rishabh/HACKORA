@@ -197,7 +197,7 @@ export default function SemanticSearch({
             ) : (
               <>
                 <Search className="w-3.5 h-3.5" />
-                Ask HACKORA
+                Ask DevLens
               </>
             )}
           </button>

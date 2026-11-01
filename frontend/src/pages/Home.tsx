@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   GitBranch,
   Network,
@@ -17,7 +17,6 @@ import {
   ChevronRight,
   ChevronDown,
   Sparkles,
-  Award,
 } from 'lucide-react';
 import FileTree, { FileTreeNodeType } from '../components/FileTree';
 import { HotspotType } from '../components/HotspotList';
@@ -28,28 +27,19 @@ import QualityScoreCard from '../components/QualityScoreCard';
 import ArchitectureMap from '../components/ArchitectureMap';
 import LandingPage from '../components/LandingPage';
 import LoadingScreen from '../components/LoadingScreen';
-import MainWorkspace from '../components/MainWorkspace';
-import Stage1Workspace from '../components/Stage1Workspace';
-import ProblemStatementSubmission from '../components/ProblemStatementSubmission';
-import AIWorkspaceChat from '../components/AIWorkspaceChat';
-import OpenInnovationWorkspace from '../components/OpenInnovationWorkspace';
-import DefenseSuite from '../components/DefenseSuite';
 import { API_BASE_URL } from '../lib/apiClient';
-import { getActiveProjectId, setActiveProjectId, createNewProject } from '../lib/projectStore';
 
-// ── Navigation section type ────────────────────────────────────────────────
-export type WorkspaceMode = 'main' | 'stage1' | 'stage1_ps' | 'stage1_chat' | 'stage1_innovation' | 'stage2';
-type Section = 'overview' | 'defense' | 'files' | 'search' | 'architecture' | 'health' | 'onboarding';
+// ΓöÇΓöÇ Navigation section type ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+type Section = 'overview' | 'files' | 'search' | 'architecture' | 'health' | 'onboarding';
 
 interface NavItem { id: Exclude<Section, 'onboarding'>; label: string; icon: React.ReactNode; }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'overview',     label: 'Overview',        icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'defense',      label: 'Defense & Audit', icon: <Award className="w-4 h-4" /> },
-  { id: 'files',        label: 'Files',           icon: <FolderTree className="w-4 h-4" /> },
-  { id: 'search',       label: 'Ask HACKORA',     icon: <Sparkles className="w-4 h-4" /> },
-  { id: 'architecture', label: 'Architecture',    icon: <Network className="w-4 h-4" /> },
-  { id: 'health',       label: 'Health',          icon: <ShieldCheck className="w-4 h-4" /> },
+  { id: 'overview',     label: 'Overview',    icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'files',        label: 'Files',       icon: <FolderTree className="w-4 h-4" /> },
+  { id: 'search',       label: 'Ask DevLens', icon: <Sparkles className="w-4 h-4" /> },
+  { id: 'architecture', label: 'Architecture',icon: <Network className="w-4 h-4" /> },
+  { id: 'health',       label: 'Health',      icon: <ShieldCheck className="w-4 h-4" /> },
 ];
 
 const QUICK_NAV_ACCENTS: Record<Exclude<Section, 'overview' | 'onboarding'>, {
@@ -66,20 +56,6 @@ const QUICK_NAV_ACCENTS: Record<Exclude<Section, 'overview' | 'onboarding'>, {
   iconClass: string;
   description: string;
 }> = {
-  defense: {
-    badgeBg: 'bg-[#3B5FE0]/20',
-    badgeHoverBg: 'group-hover:bg-[#3B5FE0]/30',
-    badgeBorder: 'border-[#3B5FE0]/35',
-    badgeHoverBorder: 'group-hover:border-[#3B5FE0]/50',
-    iconColor: 'text-[#3B5FE0]',
-    accentBar: 'bg-[#3B5FE0]',
-    borderHover: 'hover:border-[#3B5FE0]/40',
-    shadowHover: 'hover:shadow-[0_8px_20px_-4px_rgba(59,95,224,0.16),0_2px_6px_-1px_rgba(59,95,224,0.08)]',
-    gradientWash: 'bg-[radial-gradient(circle_at_top_left,rgba(59,95,224,0.08)_0%,transparent_70%)]',
-    cardClass: 'nav-card-defense',
-    iconClass: 'nav-icon-defense',
-    description: 'Judge questions, requirements audit, and mock defense.',
-  },
   files: {
     badgeBg: 'bg-[#4F46E5]/20',
     badgeHoverBg: 'group-hover:bg-[#4F46E5]/30',
@@ -144,63 +120,6 @@ import StatTooltip from '../components/StatTooltip';
 import { useQualityScores } from '../hooks/useQualityScores';
 
 export default function Home() {
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('main');
-  const [activeChatProjectId, setActiveChatProjectId] = useState<string>(() => getActiveProjectId() || '');
-  const [sharedProblemStatement, setSharedProblemStatement] = useState<string>('');
-
-  // ── URL Hash Navigation & Synchronization ──────────────────────────────────
-  const navigateTo = useCallback((mode: WorkspaceMode, projId?: string) => {
-    setWorkspaceMode(mode);
-    if (mode === 'stage1' || mode === 'stage1_ps') {
-      window.location.hash = '#/explore/ps';
-    } else if (mode === 'stage1_chat') {
-      const targetId = projId || activeChatProjectId || getActiveProjectId() || '';
-      if (targetId) {
-        setActiveChatProjectId(targetId);
-        setActiveProjectId(targetId);
-        window.location.hash = `#/explore/chat/${targetId}`;
-      } else {
-        window.location.hash = '#/explore/chat';
-      }
-    } else if (mode === 'stage1_innovation') {
-      window.location.hash = '#/explore/innovation';
-    } else if (mode === 'stage2') {
-      window.location.hash = '#/analyze';
-    } else if (mode === 'main') {
-      window.location.hash = '#/main';
-    }
-  }, [activeChatProjectId]);
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#/explore/chat/')) {
-        const id = hash.replace('#/explore/chat/', '').trim();
-        if (id) {
-          setActiveChatProjectId(id);
-          setActiveProjectId(id);
-        }
-        setWorkspaceMode('stage1_chat');
-      } else if (hash === '#/explore/chat') {
-        const storedId = getActiveProjectId();
-        if (storedId) setActiveChatProjectId(storedId);
-        setWorkspaceMode('stage1_chat');
-      } else if (hash === '#/explore/innovation') {
-        setWorkspaceMode('stage1_innovation');
-      } else if (hash === '#/explore/ps' || hash === '#/explore') {
-        setWorkspaceMode('stage1_ps');
-      } else if (hash === '#/analyze') {
-        setWorkspaceMode('stage2');
-      } else if (hash === '#/main' || hash === '#/' || !hash) {
-        setWorkspaceMode('main');
-      }
-    };
-
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
   const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState('');
@@ -236,7 +155,6 @@ export default function Home() {
   const capsuleNavRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Record<Section, HTMLButtonElement | null>>({
     overview: null,
-    defense: null,
     files: null,
     search: null,
     architecture: null,
@@ -388,7 +306,7 @@ export default function Home() {
     setIndexingStatus('indexing');
     setIndexingError(null);
     try {
-      console.log(`[HACKORA] Starting background indexing for: ${id} (force_reindex=${force})`);
+      console.log(`[DevLens AI] Starting background indexing for: ${id} (force_reindex=${force})`);
       const response = await fetch(`${API_BASE_URL}/api/repos/${id}/index${force ? '?force_reindex=true' : ''}`, {
         method: 'POST',
       });
@@ -398,9 +316,9 @@ export default function Home() {
       }
       setChunksIndexed(data.chunks_indexed);
       setIndexingStatus('success');
-      console.log(`[HACKORA] Background indexing complete for: ${id}. Chunks indexed: ${data.chunks_indexed}`);
+      console.log(`[DevLens AI] Background indexing complete for: ${id}. Chunks indexed: ${data.chunks_indexed}`);
     } catch (err: any) {
-      console.error(`[HACKORA] Indexing failed for repo: ${id}`, err);
+      console.error(`[DevLens AI] Indexing failed for repo: ${id}`, err);
       setIndexingError(err.message || 'Repository indexing failed.');
       setIndexingStatus('error');
     }
@@ -486,7 +404,7 @@ export default function Home() {
       // Fetch code quality scores in background
       fetchQualityScores(data.repo_id);
 
-      console.log('=========== HACKORA Ingestion Report ===========');
+      console.log('=========== DevLens AI Ingestion Report ===========');
       console.log('Repo ID:', data.repo_id);
       console.log('Project Name:', data.repo_name);
       console.log('Dependency Edges (Internal Imports):', data.dependencies);
@@ -540,7 +458,7 @@ export default function Home() {
     setIsHovered(false);
   };
 
-  // ── Derived ────────────────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Derived ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const { files: fileCount, folders: folderCount } = countTreeNodes(fileTree);
   const avgQuality = qualitySummary?.average_composite_score ?? null;
 
@@ -579,46 +497,7 @@ export default function Home() {
   const worthReviewingCount = scores.filter(s => s >= 45 && s < 70).length;
   const highRiskCount = scores.filter(s => s < 45).length;
 
-  // ── Render guards ─────────────────────────────────────────────────────────
-  if (workspaceMode === 'main') {
-    return (
-      <MainWorkspace
-        onSelectStage={(stage) => {
-          if (stage === 'stage1') navigateTo('stage1_chat');
-          else navigateTo('stage2');
-        }}
-        hasProblemStatement={!!sharedProblemStatement.trim()}
-        isRepoAnalyzed={isAnalyzed}
-        repoName={repoName}
-      />
-    );
-  }
-
-  // Stage 1: Conversational AI Workspace (Explore & Plan)
-  if (workspaceMode === 'stage1' || workspaceMode === 'stage1_ps' || workspaceMode === 'stage1_chat') {
-    return (
-      <AIWorkspaceChat
-        projectId={activeChatProjectId}
-        initialMode="problem_statement"
-        onBackToMain={() => navigateTo('main')}
-        onGoToStage2={() => navigateTo('stage2')}
-      />
-    );
-  }
-
-  // Stage 1: Open Innovation Track (Same Unified Conversational Engine)
-  if (workspaceMode === 'stage1_innovation') {
-    return (
-      <AIWorkspaceChat
-        projectId={activeChatProjectId}
-        initialMode="open_innovation"
-        onBackToMain={() => navigateTo('main')}
-        onGoToStage2={() => navigateTo('stage2')}
-      />
-    );
-  }
-
-  // workspaceMode === 'stage2'
+  // ΓöÇΓöÇ Render guards ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   if (isLoading) {
     return (
       <LoadingScreen
@@ -639,14 +518,12 @@ export default function Home() {
         isLoading={isLoading}
         loadingPhase={loadingPhase}
         error={error}
-        onBackToMain={() => navigateTo('main')}
-        onGoToStage1={() => navigateTo('stage1_chat')}
       />
     );
   }
 
 
-  // ── Section renderers ──────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Section renderers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const renderOverview = () => (
     <div className="pt-2 sm:pt-3 px-6 pb-8 md:px-8 max-w-7xl mx-auto w-full">
       {/* Repo Title Intro */}
@@ -684,7 +561,7 @@ export default function Home() {
           { label: 'Source Files',     value: fileCount,           icon: <Files className="w-4 h-4" />,      color: '#0D9488', borderTop: 'border-t-[#0D9488]', tooltip: 'The total number of source code and asset files parsed in the repository.' },
           { label: 'Directories',      value: folderCount,         icon: <FolderTree className="w-4 h-4" />, color: '#7C3AED', borderTop: 'border-t-[#7C3AED]', tooltip: 'The count of unique folder directories within the parsed structure.' },
           { label: 'File Links',       value: dependencies.length, icon: <GitBranch className="w-4 h-4" />,  color: '#4F46E5', borderTop: 'border-t-[#4F46E5]', tooltip: 'Total direct file-to-file connections (import relationships) detected.' },
-          { label: 'Frequently Changed', value: hotspots.length,   icon: <Flame className="w-4 h-4" />,      color: '#D97706', borderTop: 'border-t-[#D97706]', tooltip: 'Number of files that change often — prime candidates for refactoring.' },
+          { label: 'Frequently Changed', value: hotspots.length,   icon: <Flame className="w-4 h-4" />,      color: '#D97706', borderTop: 'border-t-[#D97706]', tooltip: 'Number of files that change often ΓÇö prime candidates for refactoring.' },
         ].map((stat, idx) => (
           <div
             key={stat.label}
@@ -717,33 +594,6 @@ export default function Home() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Stage 2 Defense & Verification Suite Banner */}
-      <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-blue-50/80 via-indigo-50/70 to-purple-50/80 border border-indigo-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-stagger" style={{ animationDelay: '350ms' }}>
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-            <Award className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-mono uppercase font-bold text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded">
-                Stage 2 Defense Suite
-              </span>
-              <span className="text-xs font-mono font-bold text-[#1A1D29]">Technical Judge Questions & Requirements Audit</span>
-            </div>
-            <p className="text-xs font-mono text-[#6B7280] leading-relaxed max-w-2xl">
-              Anticipate probing questions from technical judges, verify implementation evidence against stated requirements, and practice mock defense with real-time feedback.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setActiveSection('defense')}
-          className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-mono font-semibold transition-all shrink-0 flex items-center gap-2 cursor-pointer shadow-xs active:scale-95"
-        >
-          <span>Launch Defense Suite</span>
-          <ArrowRight className="w-4 h-4 stroke-[2.2]" />
-        </button>
       </div>
 
       {/* Health & Quick Navigation */}
@@ -928,7 +778,7 @@ export default function Home() {
         <ul className="flex flex-col gap-3 text-xs font-mono text-[#6B7280] leading-relaxed">
           {mostImportedFile && (
             <li className="flex items-start gap-2.5">
-              <span className="text-[#E85D2C] shrink-0 font-bold">→</span>
+              <span className="text-[#E85D2C] shrink-0 font-bold">ΓåÆ</span>
               <span>
                 This repository's most central file is <span className="text-[#1A1D29] font-bold bg-[#E85D2C]/10 px-1.5 py-0.5 rounded border border-[#E85D2C]/30 text-[#E85D2C]">`{mostImportedFileName}`</span>, which is imported or referenced by <span className="text-[#E85D2C] font-bold">{maxImports}</span> other files.
               </span>
@@ -936,7 +786,7 @@ export default function Home() {
           )}
           {topHotspot && (
             <li className="flex items-start gap-2.5">
-              <span className="text-[#EA580C] shrink-0 font-bold">→</span>
+              <span className="text-[#EA580C] shrink-0 font-bold">ΓåÆ</span>
               <span>
                 The file <span className="text-[#1A1D29] font-bold bg-[#EA580C]/10 px-1.5 py-0.5 rounded border border-[#EA580C]/30 text-[#EA580C]">`{topHotspotName}`</span> has changed <span className="text-[#EA580C] font-bold">{topHotspotCommits}</span> times in its history, making it the most active and frequently modified file.
               </span>
@@ -944,7 +794,7 @@ export default function Home() {
           )}
           {dependencies.length > 0 && (
             <li className="flex items-start gap-2.5">
-              <span className="text-[#4F46E5] shrink-0 font-bold">→</span>
+              <span className="text-[#4F46E5] shrink-0 font-bold">ΓåÆ</span>
               <span>
                 Mapped <span className="text-[#1A1D29] font-bold">{dependencies.length}</span> import connections across <span className="text-[#1A1D29] font-bold">{fileCount}</span> files, indicating a <span className="text-[#4F46E5] font-bold bg-[#4F46E5]/10 px-1.5 py-0.5 rounded border border-[#4F46E5]/30">{dependencies.length > fileCount * 1.5 ? 'highly coupled' : 'modular'}</span> codebase architecture.
               </span>
@@ -1002,7 +852,7 @@ export default function Home() {
     <div className="pt-2 sm:pt-3 px-6 pb-8 md:px-8 max-w-6xl mx-auto w-full">
       <div className="mb-6">
         <span className="text-xs font-mono text-[#E85D2C] bg-[#E85D2C]/12 border border-[#E85D2C]/30 px-2.5 py-0.5 rounded-md uppercase tracking-wider font-bold inline-block">Codebase Intelligence</span>
-        <h2 className="text-2xl font-bold text-[#1A1D29] mt-1.5" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>Ask HACKORA</h2>
+        <h2 className="text-2xl font-bold text-[#1A1D29] mt-1.5" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>Ask DevLens</h2>
         <p className="text-xs text-[#6B7280] mt-2 font-mono leading-relaxed">
           Semantic/RAG codebase search and questions. Ask architectural or behavioral questions in plain English. We scan both BM25 text keyword index and vector embeddings to extract relevant code blocks and explain them.
         </p>
@@ -1069,17 +919,6 @@ export default function Home() {
 
   const sectionContent: Record<Section, React.ReactNode> = {
     overview:     renderOverview(),
-    defense: (
-      <DefenseSuite
-        repoId={repoId}
-        repoName={repoName}
-        sharedProblemStatement={sharedProblemStatement}
-        onSelectFilePath={(path) => {
-          setSelectedFilePath(path);
-          setActiveSection('files');
-        }}
-      />
-    ),
     files:        renderFiles(),
     search:       renderSearch(),
     architecture: renderArchitecture(),
@@ -1088,29 +927,21 @@ export default function Home() {
   };
   const isFullHeightSection = activeSection === 'files' || activeSection === 'architecture';
 
-  // ── Dashboard render ───────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Dashboard render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   return (
     <div className="flex flex-col h-screen bg-[#FAFAF7] text-[#1A1D29] overflow-hidden" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
       {/* Floating Primary Header with Centered Expanding Capsule Navigation */}
       <header className="relative h-14 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 mt-4 mx-4 sm:mx-6 mb-3 rounded-2xl border border-[#E5E1DA] bg-white/95 backdrop-blur-md shadow-[0_4px_20px_-4px_rgba(26,29,41,0.06),0_1px_3px_rgba(26,29,41,0.04)] select-none z-40 transition-shadow">
         
-        {/* Left: Breadcrumb */}
-        <div className={`flex items-center gap-2 min-w-0 transition-opacity duration-250 ${isNavOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-          <button
-            onClick={() => setWorkspaceMode('main')}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#E5E1DA] hover:border-[#1A1D29] bg-white text-xs font-mono text-[#6B7280] hover:text-[#1A1D29] transition-all cursor-pointer shadow-2xs mr-0.5"
-            title="Return to Main Workspace"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Workspace</span>
-          </button>
-          <span className="text-[#E5E1DA]">/</span>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] font-mono font-bold text-[#3B5FE0] bg-[#3B5FE0]/10 px-2 py-0.5 rounded">
-              Stage 2
+        {/* Left: Breadcrumb (Clean & focused without tech stack clutter) */}
+        <div className={`flex items-center gap-2.5 min-w-0 transition-opacity duration-250 ${isNavOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-extrabold text-sm tracking-tight text-[#1A1D29] hidden sm:block" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+              DevLens <span className="text-[#E85D2C]">AI</span>
             </span>
-            <span className="text-sm text-[#1A1D29] font-medium truncate max-w-[140px] sm:max-w-[220px]">{repoName}</span>
+            <span className="text-[#E5E1DA] hidden sm:block">/</span>
+            <span className="text-sm text-[#1A1D29] font-medium truncate max-w-[140px] sm:max-w-[240px] md:max-w-[340px]">{repoName}</span>
           </div>
         </div>
 
@@ -1215,18 +1046,10 @@ export default function Home() {
         </div>
 
         {/* Right: Action Controls */}
-        <div className={`flex items-center gap-2 shrink-0 transition-opacity duration-250 ${isNavOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-          <button
-            onClick={() => navigateTo('stage1_chat')}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E85D2C]/40 bg-[#E85D2C]/10 hover:bg-[#E85D2C] text-[#E85D2C] hover:text-white text-xs font-mono font-semibold transition-all cursor-pointer shadow-2xs"
-            title="Switch to Stage 1 — Explore & Plan"
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Stage 1</span>
-          </button>
+        <div className={`flex items-center gap-2.5 shrink-0 transition-opacity duration-250 ${isNavOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E1DA] hover:border-[#1A1D29] bg-white text-[#6B7280] hover:text-[#1A1D29] text-xs font-mono font-semibold transition-all duration-150 cursor-pointer shadow-xs active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E85D2C]/50 bg-[#E85D2C]/10 hover:bg-[#E85D2C] text-[#E85D2C] hover:text-white text-xs font-mono font-semibold transition-all duration-150 cursor-pointer shadow-xs active:scale-95"
           >
             <ArrowLeft className="w-3.5 h-3.5 stroke-[2.2]" />
             <span className="hidden sm:inline">Load another</span>
@@ -1243,7 +1066,7 @@ export default function Home() {
         <div className="fixed top-12 left-0 w-[40vw] h-[40vh] rounded-full bg-[#E85D2C]/[0.02] blur-[120px] pointer-events-none z-0" />
         <div className="fixed bottom-0 right-0 w-[30vw] h-[30vh] rounded-full bg-[#F4A688]/[0.02] blur-[100px] pointer-events-none z-0" />
 
-        {/* ── Topographic Contour & Dot-Marker Background Layer (Shared foundation across all dashboard views) ── */}
+        {/* ΓöÇΓöÇ Topographic Contour & Dot-Marker Background Layer (Shared foundation across all dashboard views) ΓöÇΓöÇ */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
           <svg
             className="w-full h-full object-cover animate-topo-drift"
@@ -1327,25 +1150,25 @@ export default function Home() {
               <circle r="2" fill="#FFFFFF" />
 
               {/* Radar Target Blips (timed to flare as the sweep beam passes) */}
-              {/* Blip 1 at ~28° (x=160, y=85) */}
+              {/* Blip 1 at ~28┬░ (x=160, y=85) */}
               <g transform="translate(160, 85)" className="radar-blip-pulse-1">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="4.5" fill="#E85D2C" />
                 <circle r="1.8" fill="#FFFFFF" />
               </g>
-              {/* Blip 2 at ~120° (x=-130, y=225) */}
+              {/* Blip 2 at ~120┬░ (x=-130, y=225) */}
               <g transform="translate(-130, 225)" className="radar-blip-pulse-2">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="4.5" fill="#E85D2C" />
                 <circle r="1.8" fill="#FFFFFF" />
               </g>
-              {/* Blip 3 at ~210° (x=-310, y=-180) */}
+              {/* Blip 3 at ~210┬░ (x=-310, y=-180) */}
               <g transform="translate(-310, -180)" className="radar-blip-pulse-3">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="5" fill="#E85D2C" />
                 <circle r="2" fill="#FFFFFF" />
               </g>
-              {/* Blip 4 at ~290° (x=140, y=-380) */}
+              {/* Blip 4 at ~290┬░ (x=140, y=-380) */}
               <g transform="translate(140, -380)" className="radar-blip-pulse-4">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="4.5" fill="#E85D2C" />
