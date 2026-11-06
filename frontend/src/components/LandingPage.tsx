@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   GitBranch, 
   ArrowRight, 
@@ -446,12 +446,12 @@ export default function LandingPage({
           <div className="text-left font-mono">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#1A1D29]">12 files</span>
-              <span className="text-[10px] text-[#6B7280]">┬╖</span>
+              <span className="text-[10px] text-[#6B7280]">·</span>
               <span className="text-xs font-semibold text-[#E85D2C]">3 hops</span>
             </div>
             <div className="text-[10px] text-[#6B7280] flex items-center gap-1 mt-0.5">
               <Zap className="w-3 h-3 text-[#3B5FE0]" />
-              <span>Analyzed in 2.1s ┬╖ AST route</span>
+              <span>Analyzed in 2.1s · AST route</span>
             </div>
           </div>
         </div>
@@ -466,7 +466,7 @@ export default function LandingPage({
               +
             </div>
             <div className="w-8 h-8 flex items-center justify-center text-[#4B5563] text-base font-semibold leading-none">
-              ΓêÆ
+              −
             </div>
           </div>
         </div>
@@ -576,7 +576,7 @@ export default function LandingPage({
             >
               octocat/Spoon-Knife
             </button>
-            <span>ΓÇó</span>
+            <span>•</span>
             <button 
               type="button"
               onClick={() => setRepoUrl('https://github.com/user-Rishabh/DevLens-AI')}
@@ -598,7 +598,7 @@ export default function LandingPage({
               <span>{countLanguages}</span>
               <span className="text-xs text-[#6B7280] font-sans font-normal">Languages</span>
             </div>
-            <p className="text-[11px] font-mono text-[#6B7280] mt-1">Python ΓÇó TypeScript ΓÇó JavaScript</p>
+            <p className="text-[11px] font-mono text-[#6B7280] mt-1">Python • TypeScript • JavaScript</p>
           </div>
 
           <div className="flex flex-col items-center justify-center reveal-on-scroll stagger-2">
@@ -737,7 +737,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND ΓÇö IMPACT ANALYSIS
+                  LEGEND — IMPACT ANALYSIS
                 </span>
                 <div className="relative">
                   <span className="absolute inset-0 rounded-full bg-[#E85D2C] blast-ring opacity-0" />
@@ -746,7 +746,7 @@ export default function LandingPage({
               </div>
               <h3 className="font-display text-base font-bold text-[#1A1D29] mb-2">Downstream Impact Analysis</h3>
               <p className="text-xs text-[#6B7280] leading-relaxed">
-                Calculates a reverse adjacency graph up to 3 levels deep. Identifies every direct dependent and transitive module that imports a target file, showing exact impact flow paths (e.g. <code className="text-[#E85D2C] font-mono text-[10px] bg-[#FAFAF7] px-1.5 py-0.5 rounded border border-[#E5E1DA]">auth.py ΓåÆ routes.py ΓåÆ App.tsx</code>) before you touch code.
+                Calculates a reverse adjacency graph up to 3 levels deep. Identifies every direct dependent and transitive module that imports a target file, showing exact impact flow paths (e.g. <code className="text-[#E85D2C] font-mono text-[10px] bg-[#FAFAF7] px-1.5 py-0.5 rounded border border-[#E5E1DA]">auth.py → routes.py → App.tsx</code>) before you touch code.
               </p>
             </div>
           </div>
@@ -756,7 +756,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND ΓÇö ARCHITECTURE MAP
+                  LEGEND — ARCHITECTURE MAP
                 </span>
                 {/* Mini interactive nodes that shift on hover */}
                 <div className="flex gap-1 items-center">
@@ -777,7 +777,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#3B5FE0] uppercase tracking-wider block">
-                  LEGEND ΓÇö ASK DEVLENS
+                  LEGEND — ASK DEVLENS
                 </span>
                 <Sparkles className="w-4 h-4 text-[#3B5FE0] group-hover:scale-110 transition-transform" />
               </div>
@@ -798,7 +798,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND ΓÇö AI SUMMARIES
+                  LEGEND — AI SUMMARIES
                 </span>
                 <FileCode2 className="w-4 h-4 text-[#E85D2C] group-hover:scale-110 transition-transform" />
               </div>
@@ -814,7 +814,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#E85D2C] uppercase tracking-wider block">
-                  LEGEND ΓÇö ONBOARDING GUIDE
+                  LEGEND — ONBOARDING GUIDE
                 </span>
                 <Compass className="w-4 h-4 text-[#E85D2C] compass-icon transition-transform duration-300" />
               </div>
@@ -830,7 +830,7 @@ export default function LandingPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-mono font-bold text-[#3B5FE0] uppercase tracking-wider block">
-                  LEGEND ΓÇö CODE HEALTH
+                  LEGEND — CODE HEALTH
                 </span>
                 <BarChart3 className="w-4 h-4 text-[#3B5FE0] group-hover:scale-110 transition-transform" />
               </div>
@@ -863,11 +863,11 @@ export default function LandingPage({
 
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1A1D29] text-white text-xs font-mono font-semibold tracking-wide shadow-xs border border-[#1A1D29]/20">
                 <Target className="w-3.5 h-3.5 text-[#E85D2C]" />
-                <span>Hybrid Search ΓÇö 69.23% Recall@5</span>
+                <span>Hybrid Search — 69.23% Recall@5</span>
               </div>
             </div>
 
-            <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">UNDER THE HOOD ΓÇö TECHNICAL ARCHITECTURE</span>
+            <span className="text-xs font-mono uppercase text-[#E85D2C] tracking-wider font-semibold">UNDER THE HOOD — TECHNICAL ARCHITECTURE</span>
             <h2 className="font-display text-2xl sm:text-4xl font-extrabold text-[#1A1D29] mt-2">
               Designed for Engineering Rigor, Not Just LLM Wrappers
             </h2>
@@ -1008,7 +1008,7 @@ export default function LandingPage({
           <div className="flex items-center gap-3">
             <Navigation className="w-4 h-4 text-[#E85D2C]" />
             <span className="font-display font-bold text-sm text-[#1A1D29]">DevLens AI Engine</span>
-            <span className="text-xs font-mono text-[#6B7280]">┬⌐ 2026</span>
+            <span className="text-xs font-mono text-[#6B7280]">© 2026</span>
           </div>
 
           <div className="flex items-center gap-6 text-xs font-mono text-[#6B7280]">

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   GitBranch,
   Network,
@@ -29,7 +29,7 @@ import LandingPage from '../components/LandingPage';
 import LoadingScreen from '../components/LoadingScreen';
 import { API_BASE_URL } from '../lib/apiClient';
 
-// ΓöÇΓöÇ Navigation section type ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Navigation section type ────────────────────────────────────────────────
 type Section = 'overview' | 'files' | 'search' | 'architecture' | 'health' | 'onboarding';
 
 interface NavItem { id: Exclude<Section, 'onboarding'>; label: string; icon: React.ReactNode; }
@@ -458,7 +458,7 @@ export default function Home() {
     setIsHovered(false);
   };
 
-  // ΓöÇΓöÇ Derived ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── Derived ────────────────────────────────────────────────────────────────
   const { files: fileCount, folders: folderCount } = countTreeNodes(fileTree);
   const avgQuality = qualitySummary?.average_composite_score ?? null;
 
@@ -497,7 +497,7 @@ export default function Home() {
   const worthReviewingCount = scores.filter(s => s >= 45 && s < 70).length;
   const highRiskCount = scores.filter(s => s < 45).length;
 
-  // ΓöÇΓöÇ Render guards ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── Render guards ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <LoadingScreen
@@ -523,7 +523,7 @@ export default function Home() {
   }
 
 
-  // ΓöÇΓöÇ Section renderers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── Section renderers ──────────────────────────────────────────────────────
   const renderOverview = () => (
     <div className="pt-2 sm:pt-3 px-6 pb-8 md:px-8 max-w-7xl mx-auto w-full">
       {/* Repo Title Intro */}
@@ -561,7 +561,7 @@ export default function Home() {
           { label: 'Source Files',     value: fileCount,           icon: <Files className="w-4 h-4" />,      color: '#0D9488', borderTop: 'border-t-[#0D9488]', tooltip: 'The total number of source code and asset files parsed in the repository.' },
           { label: 'Directories',      value: folderCount,         icon: <FolderTree className="w-4 h-4" />, color: '#7C3AED', borderTop: 'border-t-[#7C3AED]', tooltip: 'The count of unique folder directories within the parsed structure.' },
           { label: 'File Links',       value: dependencies.length, icon: <GitBranch className="w-4 h-4" />,  color: '#4F46E5', borderTop: 'border-t-[#4F46E5]', tooltip: 'Total direct file-to-file connections (import relationships) detected.' },
-          { label: 'Frequently Changed', value: hotspots.length,   icon: <Flame className="w-4 h-4" />,      color: '#D97706', borderTop: 'border-t-[#D97706]', tooltip: 'Number of files that change often ΓÇö prime candidates for refactoring.' },
+          { label: 'Frequently Changed', value: hotspots.length,   icon: <Flame className="w-4 h-4" />,      color: '#D97706', borderTop: 'border-t-[#D97706]', tooltip: 'Number of files that change often — prime candidates for refactoring.' },
         ].map((stat, idx) => (
           <div
             key={stat.label}
@@ -778,7 +778,7 @@ export default function Home() {
         <ul className="flex flex-col gap-3 text-xs font-mono text-[#6B7280] leading-relaxed">
           {mostImportedFile && (
             <li className="flex items-start gap-2.5">
-              <span className="text-[#E85D2C] shrink-0 font-bold">ΓåÆ</span>
+              <span className="text-[#E85D2C] shrink-0 font-bold">→</span>
               <span>
                 This repository's most central file is <span className="text-[#1A1D29] font-bold bg-[#E85D2C]/10 px-1.5 py-0.5 rounded border border-[#E85D2C]/30 text-[#E85D2C]">`{mostImportedFileName}`</span>, which is imported or referenced by <span className="text-[#E85D2C] font-bold">{maxImports}</span> other files.
               </span>
@@ -786,7 +786,7 @@ export default function Home() {
           )}
           {topHotspot && (
             <li className="flex items-start gap-2.5">
-              <span className="text-[#EA580C] shrink-0 font-bold">ΓåÆ</span>
+              <span className="text-[#EA580C] shrink-0 font-bold">→</span>
               <span>
                 The file <span className="text-[#1A1D29] font-bold bg-[#EA580C]/10 px-1.5 py-0.5 rounded border border-[#EA580C]/30 text-[#EA580C]">`{topHotspotName}`</span> has changed <span className="text-[#EA580C] font-bold">{topHotspotCommits}</span> times in its history, making it the most active and frequently modified file.
               </span>
@@ -794,7 +794,7 @@ export default function Home() {
           )}
           {dependencies.length > 0 && (
             <li className="flex items-start gap-2.5">
-              <span className="text-[#4F46E5] shrink-0 font-bold">ΓåÆ</span>
+              <span className="text-[#4F46E5] shrink-0 font-bold">→</span>
               <span>
                 Mapped <span className="text-[#1A1D29] font-bold">{dependencies.length}</span> import connections across <span className="text-[#1A1D29] font-bold">{fileCount}</span> files, indicating a <span className="text-[#4F46E5] font-bold bg-[#4F46E5]/10 px-1.5 py-0.5 rounded border border-[#4F46E5]/30">{dependencies.length > fileCount * 1.5 ? 'highly coupled' : 'modular'}</span> codebase architecture.
               </span>
@@ -927,7 +927,7 @@ export default function Home() {
   };
   const isFullHeightSection = activeSection === 'files' || activeSection === 'architecture';
 
-  // ΓöÇΓöÇ Dashboard render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── Dashboard render ───────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-[#FAFAF7] text-[#1A1D29] overflow-hidden" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
@@ -1066,7 +1066,7 @@ export default function Home() {
         <div className="fixed top-12 left-0 w-[40vw] h-[40vh] rounded-full bg-[#E85D2C]/[0.02] blur-[120px] pointer-events-none z-0" />
         <div className="fixed bottom-0 right-0 w-[30vw] h-[30vh] rounded-full bg-[#F4A688]/[0.02] blur-[100px] pointer-events-none z-0" />
 
-        {/* ΓöÇΓöÇ Topographic Contour & Dot-Marker Background Layer (Shared foundation across all dashboard views) ΓöÇΓöÇ */}
+        {/* ── Topographic Contour & Dot-Marker Background Layer (Shared foundation across all dashboard views) ── */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
           <svg
             className="w-full h-full object-cover animate-topo-drift"
@@ -1150,25 +1150,25 @@ export default function Home() {
               <circle r="2" fill="#FFFFFF" />
 
               {/* Radar Target Blips (timed to flare as the sweep beam passes) */}
-              {/* Blip 1 at ~28┬░ (x=160, y=85) */}
+              {/* Blip 1 at ~28° (x=160, y=85) */}
               <g transform="translate(160, 85)" className="radar-blip-pulse-1">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="4.5" fill="#E85D2C" />
                 <circle r="1.8" fill="#FFFFFF" />
               </g>
-              {/* Blip 2 at ~120┬░ (x=-130, y=225) */}
+              {/* Blip 2 at ~120° (x=-130, y=225) */}
               <g transform="translate(-130, 225)" className="radar-blip-pulse-2">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="4.5" fill="#E85D2C" />
                 <circle r="1.8" fill="#FFFFFF" />
               </g>
-              {/* Blip 3 at ~210┬░ (x=-310, y=-180) */}
+              {/* Blip 3 at ~210° (x=-310, y=-180) */}
               <g transform="translate(-310, -180)" className="radar-blip-pulse-3">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="5" fill="#E85D2C" />
                 <circle r="2" fill="#FFFFFF" />
               </g>
-              {/* Blip 4 at ~290┬░ (x=140, y=-380) */}
+              {/* Blip 4 at ~290° (x=140, y=-380) */}
               <g transform="translate(140, -380)" className="radar-blip-pulse-4">
                 <circle r="14" fill="none" stroke="#E85D2C" strokeWidth="1.2" strokeOpacity="0.6" />
                 <circle r="4.5" fill="#E85D2C" />

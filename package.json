@@ -1,8 +1,8 @@
 {
-  "name": "hackora-workspace",
+  "name": "devlens-ai-workspace",
   "version": "0.1.0",
   "private": true,
-  "description": "Monorepo root helper for HACKORA",
+  "description": "Monorepo root helper for DevLens AI",
   "scripts": {
     "install:frontend": "npm install --prefix frontend",
     "dev:frontend": "npm run dev --prefix frontend",

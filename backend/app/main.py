@@ -15,8 +15,8 @@ from app.api.routes import router as api_router
 load_dotenv(override=True)
 
 app = FastAPI(
-    title="HACKORA API",
-    description="Backend service for HACKORA: AI-powered hackathon companion for research, planning, codebase intelligence, and defense.",
+    title="DevLens AI API",
+    description="Backend service for DevLens AI: codebase ingestion, dependency mapping, and analysis.",
     version="0.1.0"
 )
 
@@ -32,7 +32,7 @@ if frontend_url:
     origins.append(frontend_url)
 
 # Match Vercel subdomains (previews and production aliases starting with dev-lens-)
-origins_regex = r"https?://(dev-lens-|hackora-).*\.vercel\.app"
+origins_regex = r"https?://dev-lens-.*\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
